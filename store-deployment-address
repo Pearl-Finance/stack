@@ -1,0 +1,17 @@
+#!/bin/sh
+
+CHAIN=$1
+NAME=$2
+ADDRESS=$3
+
+FILENAME="addresses.${CHAIN}.json"
+
+if [ -f "$FILENAME" ]; then
+    JSON1=$(cat "$FILENAME")
+else
+    JSON1='{}'
+fi
+
+JSON2="{\"${NAME}\":\"${ADDRESS}\"}"
+echo $JSON1
+jq -n '$JSON1 + $JSON2' --argjson JSON1 "$JSON1" --argjson JSON2 "$JSON2" > ${FILENAME}

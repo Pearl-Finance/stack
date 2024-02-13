@@ -1,0 +1,35 @@
+[profile.ci.fuzz]
+runs = 10_000
+
+[profile.default]
+solc = "0.8.20"
+optimizer = true
+optimizer_runs = 1_000
+via_ir = true
+bytecode_hash = "none"
+ffi = true
+
+[rpc_endpoints]
+anvil = "http://localhost:8546"
+
+real = "${REAL_RPC_URL}"
+polygon = "${POLYGON_RPC_URL}"
+arbitrum_one = "${ARBITRUM_RPC_URL}"
+
+unreal = "${UNREAL_RPC_URL}"
+polygon_mumbai = "${MUMBAI_RPC_URL}"
+goerli = "${GOERLI_RPC_URL}"
+sepolia = "${SEPOLIA_RPC_URL}"
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
+polygon = { key = "${ETHERSCAN_POLYGON_KEY}" }
+mumbai = { key = "${ETHERSCAN_POLYGON_KEY}" }
+# real = { key = "${ETHERSCAN_REAL_KEY}", url = "https://real.blockscout.com/api" }
+
+unreal = { key = "", url = "https://unreal.blockscout.com/api" }
+
+[fmt]
+wrap_comments = true
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

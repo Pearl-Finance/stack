@@ -1,0 +1,8 @@
+ds-test/=lib/forge-std/lib/ds-test/src/
+forge-std/=lib/forge-std/src/
+@openzeppelin/contracts/=lib/tangible-foundation-contracts/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/tangible-foundation-contracts/lib/openzeppelin-contracts-upgradeable/contracts/
+@layerzerolabs/contracts/=lib/tangible-foundation-contracts/lib/layerzerolabs/contracts/
+@layerzerolabs/contracts-upgradeable/=lib/tangible-foundation-contracts/src/layerzero/
+@chainlink/=lib/chainlink/contracts/src/v0.8/
+@tangible/contracts/=lib/tangible-foundation-contracts/src/

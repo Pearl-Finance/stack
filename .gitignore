@@ -1,0 +1,10 @@
+.env
+
+broadcast/
+cache/
+out/
+
+*.info
+*.sh
+
+NOTES
