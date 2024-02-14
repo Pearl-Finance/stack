@@ -398,7 +398,7 @@ contract StackVault is
      */
     function depositCollateral(address to, uint256 amount) external payable nonReentrant returns (uint256 share) {
         accrueInterest();
-        _transferCollateralIn(msg.sender, amount);
+        amount = _transferCollateralIn(msg.sender, amount);
         share = _addAmountToCollateral(to, amount);
         emit CollateralDeposited(msg.sender, to, amount, share);
     }
@@ -416,8 +416,8 @@ contract StackVault is
      */
     function withdrawCollateral(address to, uint256 amount) external healthcheck nonReentrant returns (uint256 share) {
         accrueInterest();
+        amount = _transferCollateralOut(to, amount);
         share = _subtractAmountFromCollateral(msg.sender, amount);
-        _transferCollateralOut(to, amount);
         emit CollateralWithdrawn(msg.sender, to, amount, share);
     }
 
@@ -436,7 +436,7 @@ contract StackVault is
         uint256 share = $.userCollateralShare[msg.sender];
 
         amount = _subtractShareFromCollateral(msg.sender, share);
-        _transferCollateralOut(to, amount);
+        amount = _transferCollateralOut(to, amount);
 
         emit CollateralWithdrawn(msg.sender, to, amount, share);
     }
@@ -520,7 +520,7 @@ contract StackVault is
         accrueInterest();
 
         // transfer user-provided collateral and deposit total collateral
-        _transferCollateralIn(msg.sender, depositAmount);
+        depositAmount = _transferCollateralIn(msg.sender, depositAmount);
 
         // flash-mint borrow token and finalize leverage in callback function
         bytes memory data = abi.encode(msg.sender, depositAmount, swapTarget, swapData);
@@ -700,8 +700,8 @@ contract StackVault is
         uint256 collectedFee = penaltyFeeAmount - liquidationBonus;
 
         _transferCollateralOut(to, totalCollateralRemoved - collectedFee);
-        _transferCollateralOut(factory, collectedFee);
 
+        collateralToken.safeIncreaseAllowance(factory, collectedFee);
         IVaultFactory(factory).collectFees(address(collateralToken), collectedFee);
 
         emit Liquidated(msg.sender, account, totalCollateralRemoved, penaltyFeeAmount, repayAmount);
@@ -1000,11 +1000,14 @@ contract StackVault is
      * @param from The address from which to transfer the collateral.
      * @param amount The amount of collateral to transfer.
      */
-    function _transferCollateralIn(address from, uint256 amount) internal {
+    function _transferCollateralIn(address from, uint256 amount) internal returns (uint256 received) {
         if (_isNativeCollateralToken) {
-            _transferNativeIn(from, amount);
+            received = _transferNativeIn(from, amount);
         } else {
-            collateralToken.safeTransferFrom(from, address(this), amount);
+            address to = address(this);
+            uint256 balanceBefore = collateralToken.balanceOf(to);
+            collateralToken.safeTransferFrom(from, to, amount);
+            received = collateralToken.balanceOf(to) - balanceBefore;
         }
     }
 
@@ -1013,11 +1016,14 @@ contract StackVault is
      * @param to The address to which to transfer the collateral.
      * @param amount The amount of collateral to transfer.
      */
-    function _transferCollateralOut(address to, uint256 amount) internal {
+    function _transferCollateralOut(address to, uint256 amount) internal returns (uint256 sent) {
         if (_isNativeCollateralToken) {
-            _transferNativeOut(to, amount);
+            sent = _transferNativeOut(to, amount);
         } else {
+            address from = address(this);
+            uint256 balanceBefore = collateralToken.balanceOf(from);
             collateralToken.safeTransfer(to, amount);
+            sent = balanceBefore - collateralToken.balanceOf(from);
         }
     }
 
@@ -1026,13 +1032,14 @@ contract StackVault is
      * @param from The address from which to transfer the ETH.
      * @param amount The amount of ETH to transfer.
      */
-    function _transferNativeIn(address from, uint256 amount) internal {
+    function _transferNativeIn(address from, uint256 amount) internal returns (uint256 received) {
         if (msg.value == 0) {
             require(_WETH.transferFrom(from, address(this), amount));
         } else {
             require(msg.value == amount, "StackVault: Incorrect ETH value");
             _WETH.deposit{value: amount}();
         }
+        received = amount;
     }
 
     /**
@@ -1040,14 +1047,15 @@ contract StackVault is
      * @param to The address to which to transfer the ETH.
      * @param amount The amount of ETH to transfer.
      */
-    function _transferNativeOut(address to, uint256 amount) internal {
+    function _transferNativeOut(address to, uint256 amount) internal returns (uint256 sent) {
         _WETH.withdraw(amount);
-        (bool sent,) = to.call{value: amount}("");
-        if (!sent) {
+        (bool success,) = to.call{value: amount}("");
+        if (!success) {
             _WETH.deposit{value: amount}();
-            sent = _WETH.transfer(to, amount);
+            success = _WETH.transfer(to, amount);
         }
-        require(sent, "StackVault: Failed to send ETH");
+        require(success, "StackVault: Failed to send ETH");
+        sent = amount;
     }
 
     /**

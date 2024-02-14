@@ -179,8 +179,10 @@ contract VaultFactory is
      */
     function collectFees(address token, uint256 amount) external onlyVault {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
-        emit FeesCollected(msg.sender, token, amount);
-        IERC20(token).safeTransfer($.penaltyReceiver, amount);
+        address to = $.penaltyReceiver;
+        uint256 balanceBefore = IERC20(token).balanceOf(to);
+        IERC20(token).safeTransferFrom(msg.sender, to, amount);
+        emit FeesCollected(msg.sender, token, IERC20(token).balanceOf(to) - balanceBefore);
     }
 
     /**
