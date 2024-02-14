@@ -18,10 +18,25 @@ interface IRouter {
         uint160 sqrtPriceLimitX96;
     }
 
+    struct ExactInputParams {
+        bytes path;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+    }
+
     /**
      * @notice Executes a single token swap with exact input parameters on Uniswap V3.
-     * @param params Struct containing swap parameters such as token addresses, fee, amounts, and other trade details.
+     * @param params The parameters necessary for the swap, encoded as `ExactInputSingleParams` in calldata.
      * @return amountOut The amount of output tokens received from the swap.
      */
     function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
+
+    /**
+     * @notice Executes a swap with exact input parameters on Uniswap V3.
+     * @param params The parameters necessary for the multi-hop swap, encoded as `ExactInputParams` in calldata.
+     * @return amountOut The amount of output tokens received from the swap.
+     */
+    function exactInput(ExactInputParams memory params) external payable returns (uint256 amountOut);
 }

@@ -146,6 +146,33 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**
+     * @notice Executes a token swap through the Uniswap V3 router.
+     * @dev Swaps a specified amount of one token for another via muti-hop. Requires the tokenIn to be approved for
+     * transfer.
+     *      The operation is executed via the Uniswap V3 router using the stored router address.
+     * @param path The path of tokens to swap through.
+     * @param amountIn The amount of the input token to swap.
+     * @param minAmountOut The minimum amount of the output token to receive.
+     * @return The amount of the output token received.
+     */
+    function swap(bytes memory path, uint256 amountIn, uint256 minAmountOut) external returns (uint256) {
+        PearlRouterStorage storage $ = _getPearlRouterStorage();
+        address router = $.swapRouter;
+        address tokenIn = _firstAddressInPath(path);
+        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        IERC20(tokenIn).safeIncreaseAllowance(router, amountIn);
+        IRouter.ExactInputParams memory params = IRouter.ExactInputParams({
+            path: path,
+            recipient: msg.sender,
+            deadline: block.timestamp,
+            amountIn: amountIn,
+            amountOutMinimum: minAmountOut
+        });
+
+        return IRouter(router).exactInput(params);
+    }
+
+    /**
      * @notice Retrieves the required input amount for a given output amount in a swap.
      * @dev Uses the Uniswap V3 quoter to estimate the input amount required for a swap.
      *      The operation is executed via the Uniswap V3 quoter using the stored quoter address.
@@ -172,6 +199,19 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**
+     * @notice Retrieves the required input amount for a given output amount in a swap.
+     * @dev Uses the Uniswap V3 quoter to estimate the input amount required for a swap via multi-hop.
+     *      The operation is executed via the Uniswap V3 quoter using the stored quoter address.
+     * @param path The path of tokens to swap through.
+     * @param amountOut The amount of the output token.
+     * @return amountIn The estimated amount of the input token required.
+     */
+    function getAmountIn(bytes memory path, uint256 amountOut) external returns (uint256 amountIn) {
+        PearlRouterStorage storage $ = _getPearlRouterStorage();
+        (amountIn,,,) = IQuoter($.quoter).quoteExactOutput(path, amountOut);
+    }
+
+    /**
      * @notice Retrieves the output amount for a given input amount in a swap.
      * @dev Uses the Uniswap V3 quoter to estimate the output amount required for a swap.
      *      The operation is executed via the Uniswap V3 quoter using the stored quoter address.
@@ -195,5 +235,30 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable {
                 sqrtPriceLimitX96: 0
             })
         );
+    }
+
+    /**
+     * @notice Retrieves the output amount for a given input amount in a swap.
+     * @dev Uses the Uniswap V3 quoter to estimate the output amount required for a swap via multi-hop.
+     *      The operation is executed via the Uniswap V3 quoter using the stored quoter address.
+     * @param path The path of tokens to swap through.
+     * @param amountIn The amount of the input token.
+     * @return amountOut The estimated amount of the output token.
+     */
+    function getAmountOut(bytes memory path, uint256 amountIn) external returns (uint256 amountOut) {
+        PearlRouterStorage storage $ = _getPearlRouterStorage();
+        (amountOut,,,) = IQuoter($.quoter).quoteExactInput(path, amountIn);
+    }
+
+    /**
+     * @notice Retrieves the address of the first token in a given path.
+     * @param path The path of tokens to swap through.
+     * @return firstAddress The address of the first token in the path.
+     */
+    function _firstAddressInPath(bytes memory path) internal view returns (address firstAddress) {
+        require(path.length >= 20, "OB");
+        assembly {
+            firstAddress := div(mload(add(path, 0x20)), 0x1000000000000000000000000)
+        }
     }
 }

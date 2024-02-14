@@ -36,6 +36,24 @@ interface IQuoter {
         returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate);
 
     /**
+     * @notice Fetches a quote for a swap with an exact input amount.
+     * @param path The path of the tokens to be swapped.
+     * @param amountIn The amount of input tokens to be swapped.
+     * @return amountOut The amount of output tokens that can be received for the given input.
+     * @return sqrtPriceX96AfterList The square root prices along the path after the swap.
+     * @return initializedTicksCrossedList The number of ticks initialized along the path as a result of the swap.
+     * @return gasEstimate An estimate of the gas cost for the swap.
+     */
+    function quoteExactInput(bytes memory path, uint256 amountIn)
+        external
+        returns (
+            uint256 amountOut,
+            uint160[] memory sqrtPriceX96AfterList,
+            uint32[] memory initializedTicksCrossedList,
+            uint256 gasEstimate
+        );
+
+    /**
      * @notice Fetches a quote for a swap with an exact output amount.
      * @param params Struct containing parameters such as token addresses, output amount, fee, and other details.
      * @return amountIn The amount of input tokens required to receive the given output.
@@ -46,4 +64,22 @@ interface IQuoter {
     function quoteExactOutputSingle(QuoteExactOutputSingleParams memory params)
         external
         returns (uint256 amountIn, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate);
+
+    /**
+     * @notice Fetches a quote for a swap with an exact output amount.
+     * @param path The path of the tokens to be swapped.
+     * @param amountOut The amount of output tokens to be received.
+     * @return amountIn The amount of input tokens required to receive the given output.
+     * @return sqrtPriceX96AfterList The square root prices along the path after the swap.
+     * @return initializedTicksCrossedList The number of ticks initialized along the path as a result of the swap.
+     * @return gasEstimate An estimate of the gas cost for the swap.
+     */
+    function quoteExactOutput(bytes memory path, uint256 amountOut)
+        external
+        returns (
+            uint256 amountIn,
+            uint160[] memory sqrtPriceX96AfterList,
+            uint32[] memory initializedTicksCrossedList,
+            uint256 gasEstimate
+        );
 }
