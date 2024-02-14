@@ -1050,10 +1050,6 @@ contract StackVault is
         require(sent, "StackVault: Failed to send ETH");
     }
 
-    event Check(string message, bool value);
-    event Check(string message, address value);
-    event Check(string message, uint256 value);
-
     /**
      * @notice Checks if a user's position is healthy, i.e., not subject to liquidation.
      * @dev Determines the health of a user's position based on their collateral value and borrow value.
