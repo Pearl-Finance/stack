@@ -991,7 +991,7 @@ contract StackVault is
         emit FlashloanFeeReceived(feeAmount);
         StackVaultStorage storage $ = _getStackVaultStorage();
         address factory = $._factory;
-        _transferCollateralOut(factory, feeAmount);
+        collateralToken.safeIncreaseAllowance(factory, feeAmount);
         IVaultFactory(factory).collectFees(address(collateralToken), feeAmount);
     }
 
