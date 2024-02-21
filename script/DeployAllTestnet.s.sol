@@ -3,10 +3,7 @@ pragma solidity ^0.8.0;
 
 import {DeployAllBase} from "./base/DeployAllBase.sol";
 
-// forge script ./script/DeployAllTestnet.s.sol --legacy --sig "deployOnMainChain()" --rpc-url unreal --broadcast \
-//     --sender 0x839aeea3537989ce05ea1b218ab0f25e54cc3b3f --verify \
-//     --verifier blockscout --verifier-url "https://unreal.blockscout.com/api"
-// forge script ./script/DeployAllTestnet.s.sol --legacy --sig "deployOnAllChains()" --broadcast
+// forge script ./script/DeployAllTestnet.s.sol --legacy --broadcast
 contract DeployAll is DeployAllBase {
     function _getMainChainAlias() internal pure override returns (string memory) {
         return "unreal";

@@ -7,7 +7,7 @@ optimizer = true
 optimizer_runs = 1_000
 via_ir = true
 bytecode_hash = "none"
-ffi = true
+fs_permissions = [{ access = "read-write", path = "./deployments/"}]
 
 [rpc_endpoints]
 anvil = "http://localhost:8546"

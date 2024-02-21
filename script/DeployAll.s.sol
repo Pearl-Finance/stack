@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {DeployAllBase} from "./base/DeployAllBase.sol";
 
-// forge script ./script/DeployAll.s.sol --broadcast
+// forge script ./script/DeployAll.s.sol --legacy --broadcast
 contract DeployAll is DeployAllBase {
     function _getMainChainAlias() internal pure override returns (string memory) {
         return "real";

@@ -206,8 +206,7 @@ abstract contract DeploymentScriptBase is Script {
 
     /**
      * @dev Saves the deployment address of a contract to the chain's deployment address JSON file. This function is
-     * essential for
-     * tracking the deployment of contracts and ensuring that the contract's address is stored for future
+     * essential for tracking the deployment of contracts and ensuring that the contract's address is stored for future
      * reference.
      * @param name The name of the contract for which the deployment address is being saved.
      * @param addr The address of the deployed contract.
@@ -215,11 +214,61 @@ abstract contract DeploymentScriptBase is Script {
     function _saveDeploymentAddress(string memory name, address addr) internal {
         Chain memory _chain = getChain(block.chainid);
         string memory chainAlias = _chain.chainAlias;
-        string[] memory commandInput = new string[](4);
-        commandInput[0] = "store-deployment-address";
-        commandInput[1] = chainAlias;
-        commandInput[2] = name;
-        commandInput[3] = vm.toString(addr);
-        vm.ffi(commandInput);
+        string memory root = vm.projectRoot();
+        string memory path = string.concat(root, "/deployments/", chainAlias, ".json");
+        string memory json;
+        string memory output;
+        string[] memory keys;
+
+        if (vm.exists(path)) {
+            json = vm.readFile(path);
+            keys = vm.parseJsonKeys(json, "$");
+        } else {
+            keys = new string[](0);
+        }
+
+        bool serialized;
+
+        for (uint256 i; i < keys.length; i++) {
+            if (keccak256(bytes(keys[i])) == keccak256(bytes(name))) {
+                output = vm.serializeAddress(chainAlias, name, addr);
+                serialized = true;
+            } else {
+                address value = vm.parseJsonAddress(json, string.concat(".", keys[i]));
+                output = vm.serializeAddress(chainAlias, keys[i], value);
+            }
+        }
+
+        if (!serialized) {
+            output = vm.serializeAddress(chainAlias, name, addr);
+        }
+
+        vm.writeJson(output, path);
+    }
+
+    /**
+     * @dev Loads the deployment address of a contract from the chain's deployment address JSON file. This function is
+     * crucial for retrieving the address of a previously deployed contract, particularly when the address is needed for
+     * subsequent operations, like proxy upgrades.
+     * @param name The name of the contract for which the deployment address is being loaded.
+     * @return addr The address of the deployed contract.
+     */
+    function _loadDeploymentAddress(string memory name) internal returns (address) {
+        Chain memory _chain = getChain(block.chainid);
+        string memory chainAlias = _chain.chainAlias;
+        string memory root = vm.projectRoot();
+        string memory path = string.concat(root, "/deployments/", chainAlias, ".json");
+
+        if (vm.exists(path)) {
+            string memory json = vm.readFile(path);
+            string[] memory keys = vm.parseJsonKeys(json, "$");
+            for (uint256 i; i < keys.length; i++) {
+                if (keccak256(bytes(keys[i])) == keccak256(bytes(name))) {
+                    return vm.parseJsonAddress(json, string.concat(".", keys[i]));
+                }
+            }
+        }
+
+        return address(0);
     }
 }

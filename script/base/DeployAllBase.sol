@@ -23,40 +23,7 @@ import {PearlRouter} from "../../src/periphery/PearlRouter.sol";
 abstract contract DeployAllBase is PearlDeploymentScript {
     string private constant VAULT_FACTORY_KEY = "VaultFactory-v4";
 
-    function deployOnMainChain() public {
-        // this is separate from the rest as Foundry does not support library linking on multi chain deployments
-        _setup();
-
-        string memory mainChainAlias = _getMainChainAlias();
-        uint256 mainChainId = getChain(mainChainAlias).chainId;
-
-        vm.startBroadcast(_pk);
-
-        Chain memory _chain = getChain(getChain(mainChainAlias).chainId);
-        address moreAddress = _deployMore(mainChainId);
-        More more = More(moreAddress);
-        address moreStakingVault = _deployMoreStakingVault(address(more), _chain.name, _chain.chainAlias);
-        (address vaultFactoryAddress,) = _computeProxyAddress(VAULT_FACTORY_KEY);
-        address moreMinter = _deployMoreMinter(address(more), vaultFactoryAddress);
-        if (more.minter() != moreMinter) {
-            more.setMinter(moreMinter);
-        }
-        address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault);
-        address moreOracle = _deployMoreOracle(address(more));
-        address ustbOracle = _deployUSTBOracle(address(_getUSTBAddress()));
-        address implementationDeployer = _deployVaultImplementationDeployer();
-        address vaultDeployer = _deployVaultDeployer(vaultFactoryAddress, implementationDeployer);
-        address vaultFactory = _deployVaultFactory(moreMinter, moreOracle, vaultDeployer, feeSplitter);
-        address pearlRouter = _deployPearlRouter();
-        assert(vaultFactoryAddress == vaultFactory);
-        if (!VaultFactory(vaultFactory).isTrustedSwapTarget(pearlRouter)) {
-            VaultFactory(vaultFactory).setTrustedSwapTarget(pearlRouter, true);
-        }
-
-        vm.stopBroadcast();
-    }
-
-    function deployOnAllChains() public {
+    function run() public {
         _setup();
 
         string memory mainChainAlias = _getMainChainAlias();
@@ -65,6 +32,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         uint256 mainChainId = getChain(mainChainAlias).chainId;
 
         for (uint256 i = 0; i < deploymentChainAliases.length; i++) {
+            Chain memory _chain = getChain(getChain(deploymentChainAliases[i]).chainId);
             console.log("---------------------------------");
             console.log("CHAIN: %s", deploymentChainAliases[i]);
             console.log("---");
@@ -72,6 +40,23 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             vm.startBroadcast(_pk);
             address moreAddress = _deployMore(mainChainId);
             More more = More(moreAddress);
+            address moreStakingVault = _deployMoreStakingVault(address(more), _chain.name, _chain.chainAlias);
+            (address vaultFactoryAddress,) = _computeProxyAddress(VAULT_FACTORY_KEY);
+            address moreMinter = _deployMoreMinter(address(more), vaultFactoryAddress);
+            if (more.minter() != moreMinter) {
+                more.setMinter(moreMinter);
+            }
+            address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault);
+            address moreOracle = _deployMoreOracle(address(more));
+            address ustbOracle = _deployUSTBOracle(address(_getUSTBAddress()));
+            address implementationDeployer = _deployVaultImplementationDeployer();
+            address vaultDeployer = _deployVaultDeployer(vaultFactoryAddress, implementationDeployer);
+            address vaultFactory = _deployVaultFactory(moreMinter, moreOracle, vaultDeployer, feeSplitter);
+            address pearlRouter = _deployPearlRouter();
+            assert(vaultFactoryAddress == vaultFactory);
+            if (!VaultFactory(vaultFactory).isTrustedSwapTarget(pearlRouter)) {
+                VaultFactory(vaultFactory).setTrustedSwapTarget(pearlRouter, true);
+            }
             for (uint256 j = 0; j < deploymentChainAliases.length; j++) {
                 if (i != j) {
                     if (
