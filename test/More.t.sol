@@ -16,7 +16,7 @@ contract MoreTest is Test, IERC3156FlashBorrower {
 
     function setUp() public {
         LZEndpointMock lzEndpoint = new LZEndpointMock(uint16(block.chainid));
-        More impl = new More(block.chainid, address(lzEndpoint));
+        More impl = new More(address(lzEndpoint));
         bytes memory init = abi.encodeCall(impl.initialize, (address(1)));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), init);
         more = More(address(proxy));

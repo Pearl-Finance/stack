@@ -5,10 +5,6 @@ import {DeployAllBase} from "./base/DeployAllBase.sol";
 
 // forge script ./script/DeployAll.s.sol --legacy --broadcast
 contract DeployAll is DeployAllBase {
-    function _getMainChainAlias() internal pure override returns (string memory) {
-        return "real";
-    }
-
     function _getUSTBAddress() internal pure override returns (address) {
         revert("DeployAll: USTB address not set");
     }

@@ -10,8 +10,8 @@ import {ERC20FlashMintUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20FlashMintUpgradeable.sol";
 
 import {OFTUpgradeable} from "@tangible/contracts/layerzero/token/oft/v1/OFTUpgradeable.sol";
-import {CrossChainToken} from "@tangible/contracts/tokens/CrossChainToken.sol";
 
+import {CommonErrors} from "../interfaces/CommonErrors.sol";
 import {IERC20Mintable} from "../interfaces/IERC20Mintable.sol";
 import {BorrowToken} from "./BorrowToken.sol";
 
@@ -20,24 +20,23 @@ import {BorrowToken} from "./BorrowToken.sol";
  * @notice An advanced ERC20 token supporting cross-chain transfers, flash minting, and custom minting.
  * @dev Inherits from:
  *      - `BorrowToken` for basic token functionalities including burn and flash mint.
- *      - `CrossChainToken` and `OFTUpgradeable` for cross-chain transfer capabilities.
+ *      - `OFTUpgradeable` for cross-chain transfer capabilities.
  *      - `ReentrancyGuardUpgradeable` for protection against reentrancy attacks.
  *      - `UUPSUpgradeable` for upgradeability.
- *      The contract includes a custom minting function controlled by a designated minter or the contract owner.
+ *      The contract includes a custom minting function controlled by a designated minter.
  * @author SeaZarrgh LaBuoy
  */
-contract More is BorrowToken, CrossChainToken, OFTUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+contract More is BorrowToken, OFTUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable, CommonErrors {
     address public minter;
 
     /**
      * @notice Initializes the More contract.
      * @dev Sets up the contract with cross-chain token functionalities. Disables initializers to prevent
      *      reinitialization after an upgrade.
-     * @param mainChainId The chain ID of the main chain for cross-chain functionality.
      * @param endpoint The LayerZero endpoint for cross-chain communication.
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(uint256 mainChainId, address endpoint) CrossChainToken(mainChainId) OFTUpgradeable(endpoint) {
+    constructor(address endpoint) OFTUpgradeable(endpoint) {
         _disableInitializers();
     }
 
@@ -73,15 +72,13 @@ contract More is BorrowToken, CrossChainToken, OFTUpgradeable, ReentrancyGuardUp
 
     /**
      * @notice Mints new tokens to a specified address.
-     * @dev Custom minting function restricted to the minter or the contract owner. Asserts that the contract is on the
-     *      main chain.
+     * @dev Custom minting function restricted to the minter.
      * @param to The address to receive the minted tokens.
      * @param amount The amount of tokens to mint.
      */
     function mint(address to, uint256 amount) external {
-        assert(isMainChain);
-        if (minter != msg.sender && owner() != msg.sender) {
-            revert OwnableUnauthorizedAccount(msg.sender);
+        if (minter != msg.sender) {
+            revert UnauthorizedCaller();
         }
         _mint(to, amount);
     }

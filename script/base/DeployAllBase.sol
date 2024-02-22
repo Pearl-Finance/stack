@@ -26,10 +26,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
     function run() public {
         _setup();
 
-        string memory mainChainAlias = _getMainChainAlias();
         string[] memory deploymentChainAliases = _getDeploymentChainAliases();
-
-        uint256 mainChainId = getChain(mainChainAlias).chainId;
 
         for (uint256 i = 0; i < deploymentChainAliases.length; i++) {
             Chain memory _chain = getChain(getChain(deploymentChainAliases[i]).chainId);
@@ -38,7 +35,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             console.log("---");
             vm.createSelectFork(deploymentChainAliases[i]);
             vm.startBroadcast(_pk);
-            address moreAddress = _deployMore(mainChainId);
+            address moreAddress = _deployMore();
             More more = More(moreAddress);
             address moreStakingVault = _deployMoreStakingVault(address(more), _chain.name, _chain.chainAlias);
             (address vaultFactoryAddress,) = _computeProxyAddress(VAULT_FACTORY_KEY);
@@ -89,18 +86,6 @@ abstract contract DeployAllBase is PearlDeploymentScript {
     function _getWETH9() internal pure virtual returns (address);
 
     /**
-     * @dev Virtual function to be overridden in derived contracts to return the alias of the main chain in the Pearl
-     * ecosystem deployment. This alias is crucial for identifying the primary network where specific operations like
-     * preminting will occur.
-     *
-     * Implementations in derived contracts should specify the chain alias that represents the main network in the
-     * context of the Pearl ecosystem.
-     *
-     * @return A string representing the alias of the main chain.
-     */
-    function _getMainChainAlias() internal pure virtual returns (string memory);
-
-    /**
      * @dev Virtual function to be overridden in derived contracts to provide an array of chain aliases where the MORE
      * token will be deployed. This list is essential for ensuring the deployment and configuration of MORE across
      * multiple networks.
@@ -112,12 +97,12 @@ abstract contract DeployAllBase is PearlDeploymentScript {
      */
     function _getDeploymentChainAliases() internal pure virtual returns (string[] memory aliases);
 
-    function _deployMore(uint256 mainChainId) private returns (address moreProxy) {
+    function _deployMore() private returns (address moreProxy) {
         address lzEndpoint = _getLzEndpoint();
         bytes memory bytecode = abi.encodePacked(type(More).creationCode);
 
         address moreAddress =
-            vm.computeCreate2Address(_SALT, keccak256(abi.encodePacked(bytecode, abi.encode(mainChainId, lzEndpoint))));
+            vm.computeCreate2Address(_SALT, keccak256(abi.encodePacked(bytecode, abi.encode(lzEndpoint))));
 
         More more;
 
@@ -125,7 +110,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             console.log("MORE is already deployed to %s", moreAddress);
             more = More(moreAddress);
         } else {
-            more = new More{salt: _SALT}(mainChainId, lzEndpoint);
+            more = new More{salt: _SALT}(lzEndpoint);
             assert(moreAddress == address(more));
             console.log("MORE deployed to %s", moreAddress);
         }

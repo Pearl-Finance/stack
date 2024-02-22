@@ -255,7 +255,7 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable {
      * @param path The path of tokens to swap through.
      * @return firstAddress The address of the first token in the path.
      */
-    function _firstAddressInPath(bytes memory path) internal view returns (address firstAddress) {
+    function _firstAddressInPath(bytes memory path) internal pure returns (address firstAddress) {
         require(path.length >= 20, "OB");
         assembly {
             firstAddress := div(mload(add(path, 0x20)), 0x1000000000000000000000000)
