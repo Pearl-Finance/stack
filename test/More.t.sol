@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 import "src/tokens/More.sol";
+import "src/tokens/MoreMinter.sol";
 
 contract MoreTest is Test, IERC3156FlashBorrower {
     More more;
@@ -20,7 +21,12 @@ contract MoreTest is Test, IERC3156FlashBorrower {
         bytes memory init = abi.encodeCall(impl.initialize, (address(1)));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), init);
         more = More(address(proxy));
-        more.mint(address(this), 1_000_000 ether);
+        MoreMinter minter = new MoreMinter(address(proxy));
+        init = abi.encodeCall(minter.initialize, (address(this), address(0), address(0)));
+        ERC1967Proxy minterProxy = new ERC1967Proxy(address(minter), init);
+        minter = MoreMinter(address(minterProxy));
+        more.setMinter(address(minter));
+        minter.mint(address(this), 1_000_000 ether);
     }
 
     function testMetadata() public {
