@@ -371,12 +371,34 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable {
         }
     }
 
+    /**
+     * @notice Retrieves a checkpoint at a specific index in the checkpoint history.
+     * @dev Returns a checkpoint containing the timestamp and total amount of tokens distributed up to that point. The
+     * function calculates the index within the checkpoint array using a modulo operation to ensure it wraps around in a
+     * circular manner, based on the `CHECKPOINT_HISTORY_LENGTH`. This allows fetching of historical distribution data
+     * efficiently.
+     * @param index The index of the checkpoint to retrieve, relative to the `lastCheckpointIndex`. This parameter
+     * allows querying of checkpoints in a circular array fashion.
+     * @return A `Checkpoint` struct containing the `timestamp` and `totalDistributed` at the specified index. The
+     * `timestamp` represents when the checkpoint was recorded, and `totalDistributed` indicates the cumulative amount
+     * of tokens distributed by the contract up to that checkpoint.
+     */
     function checkpoint(uint256 index) external view returns (Checkpoint memory) {
         FeeSplitterStorage storage $ = _getFeeSplitterStorage();
         uint256 lastCheckpointIndex = $.lastCheckpointIndex;
         return $.checkpoints[(lastCheckpointIndex + index) % CHECKPOINT_HISTORY_LENGTH];
     }
 
+    /**
+     * @notice Returns a list of all fee receivers currently registered in the contract.
+     * @dev Iterates through the contract's storage to compile a complete list of fee receivers along with their split
+     * percentages. This function is useful for querying the entire set of receivers to understand how the distribution
+     * of tokens is configured at any point in time.
+     * @return An array of `FeeReceiver` structs, each containing the `receiver` address and their respective `split`
+     * percentage. The `receiver` is the address eligible to receive a portion of the distributed tokens, and the
+     * `split` defines the proportion of the distribution that they are entitled to, relative to the total distribution
+     * split.
+     */
     function allReceivers() external view returns (FeeReceiver[] memory) {
         FeeSplitterStorage storage $ = _getFeeSplitterStorage();
         return $.feeReceivers;

@@ -224,7 +224,27 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         splits[1] = 50;
 
         feeSplitter = FeeSplitter(feeSplitterProxy);
-        feeSplitter.setReceivers(receivers, splits);
+
+        FeeSplitter.FeeReceiver[] memory currentReceivers = feeSplitter.allReceivers();
+
+        bool shouldUpdate = false;
+        if (currentReceivers.length != receivers.length) {
+            shouldUpdate = true;
+        } else {
+            for (uint256 i = currentReceivers.length; i != 0;) {
+                unchecked {
+                    --i;
+                }
+                if (currentReceivers[i].receiver != receivers[i] || currentReceivers[i].split != splits[i]) {
+                    shouldUpdate = true;
+                    break;
+                }
+            }
+        }
+
+        if (shouldUpdate) {
+            feeSplitter.setReceivers(receivers, splits);
+        }
     }
 
     function _deployMoreOracle(address more) private returns (address moreOracleAddress) {
