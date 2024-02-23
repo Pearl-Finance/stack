@@ -13,6 +13,10 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: Swap Router address not set");
     }
 
+    function _getPearlFactoryAddress() internal pure override returns (address) {
+        revert("DeployAll: Pearl factory address not set");
+    }
+
     function _getQuoterAddress() internal pure override returns (address) {
         revert("DeployAll: Quoter address not set");
     }

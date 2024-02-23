@@ -19,6 +19,7 @@ import {VaultFactory} from "../../src/factories/VaultFactory.sol";
 import {StaticPriceOracle} from "../../src/oracles/StaticPriceOracle.sol";
 import {StackVault} from "../../src/vaults/StackVault.sol";
 import {PearlRouter} from "../../src/periphery/PearlRouter.sol";
+import {PearlRouteFinder} from "../../src/periphery/PearlRouteFinder.sol";
 
 abstract contract DeployAllBase is PearlDeploymentScript {
     string private constant VAULT_FACTORY_KEY = "VaultFactory-v4";
@@ -74,6 +75,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
     function _getUSTBAddress() internal pure virtual returns (address);
 
     function _getSwapRouterAddress() internal pure virtual returns (address);
+
+    function _getPearlFactoryAddress() internal pure virtual returns (address);
 
     function _getQuoterAddress() internal pure virtual returns (address);
 
@@ -390,6 +393,28 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         if (pearlRouter.getQuoter() != quoterAddress) {
             pearlRouter.setQuoter(quoterAddress);
         }
+
+        _deployPearlRouteFinder(pearlRouterProxy);
+    }
+
+    function _deployPearlRouteFinder(address router) private returns (address pearlRouterProxy) {
+        address factory = _getPearlFactoryAddress();
+        bytes memory bytecode = abi.encodePacked(type(PearlRouteFinder).creationCode, abi.encode(factory, router));
+
+        address pearlRouteFinderAddress = vm.computeCreate2Address(_SALT, keccak256(bytecode));
+
+        PearlRouteFinder pearlRouteFinder;
+
+        if (_isDeployed(pearlRouteFinderAddress)) {
+            console.log("Pearl Route Finder is already deployed to %s", pearlRouteFinderAddress);
+            pearlRouteFinder = PearlRouteFinder(pearlRouteFinderAddress);
+        } else {
+            pearlRouteFinder = new PearlRouteFinder{salt: _SALT}(factory, router);
+            assert(pearlRouteFinderAddress == address(pearlRouteFinder));
+            console.log("Pearl Route Finder deployed to %s", pearlRouteFinderAddress);
+        }
+
+        _saveDeploymentAddress("PearlRouteFinder", address(pearlRouteFinder));
     }
 
     /**

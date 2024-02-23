@@ -13,6 +13,10 @@ contract DeployAll is DeployAllBase {
         return 0xC1734f65345A162edc078edB6465853CF86100B7;
     }
 
+    function _getPearlFactoryAddress() internal pure override returns (address) {
+        return 0xC46cDB77FF184562A834Ff684f0393b0cA57b5E5;
+    }
+
     function _getQuoterAddress() internal pure override returns (address) {
         return 0xbA72f9Afb2759eC1882e5D51aa5f8c480Fe61Bd8;
     }
