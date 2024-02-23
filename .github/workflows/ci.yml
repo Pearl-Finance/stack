@@ -24,6 +24,10 @@ jobs:
 
       - name: Run tests
         run: forge test -vvvv
+        env:
+          UNREAL_RPC_URL: ${{ secrets.UNREAL_RPC_URL }}
 
       - name: Test coverage
         run: forge coverage --ir-minimum
+        env:
+          UNREAL_RPC_URL: ${{ secrets.UNREAL_RPC_URL }}
