@@ -174,6 +174,24 @@ abstract contract VaultFactoryVaultManagement is CommonErrors, OwnableUpgradeabl
     }
 
     /**
+     * @notice Updates the oracle address used for collateral token price feeds for a specific vault.
+     * @dev Sets a new oracle for obtaining collateral token price feeds, replacing the existing oracle address for the
+     * specified vault. This function can only be called by the contract owner. It ensures that the new oracle address
+     * differs from the current one to prevent unnecessary state changes. The oracle is critical for calculating the
+     * collateralization ratio and managing loan security.
+     * @param vault The address of the vault for which to update the collateral token oracle.
+     * @param newOracle The address of the new oracle to be set for the collateral token price feeds.
+     */
+    function setCollateralTokenOracle(address payable vault, address newOracle) public onlyOwner {
+        StackVault _vault = _requireVault(vault);
+        address oldOracle = _vault.collateralTokenOracle();
+        if (oldOracle == newOracle) {
+            revert ValueUnchanged();
+        }
+        _vault.setCollateralTokenOracle(newOracle);
+    }
+
+    /**
      * @notice Sets a new liquidation penalty fee for a specific vault.
      * @dev Updates the liquidation penalty fee for a given vault by invoking the `setLiquidationPenaltyFee` method on
      *      the StackVault contract.

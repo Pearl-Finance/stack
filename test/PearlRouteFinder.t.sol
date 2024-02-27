@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import {PearlRouteFinder} from "src/periphery/PearlRouteFinder.sol";
 import {PearlRouter} from "src/periphery/PearlRouter.sol";
@@ -11,21 +12,23 @@ import {PearlRouter} from "src/periphery/PearlRouter.sol";
 contract PearlRouteFinderTest is Test {
     string UNREAL_RPC_URL = vm.envString("UNREAL_RPC_URL");
 
+    PearlRouter router;
     PearlRouteFinder finder;
 
     function setUp() public {
-        vm.createSelectFork(UNREAL_RPC_URL, 50675);
+        vm.createSelectFork(UNREAL_RPC_URL, 56450);
 
-        address pearlFactory = 0xC46cDB77FF184562A834Ff684f0393b0cA57b5E5;
-        address pearlRouter = 0x9e9A321968d5cA11f92947102313612615bae500;
-        address pearlQuoter = 0x5aB061CAe88b7c125D6990648fA863390bf0cB7e;
+        address pearlFactory = 0x5A9aA74caceede5eAbBeDE2F425faEB85fdCE2f2;
+        address pearlRouter = 0x4b15F7725a6B0dbb51421220c445fE3f57Bfca8b;
+        address pearlQuoter = 0x96A3A276ACd970248c833E11a25c786e689cbaC9;
 
         PearlRouter routerImplementation = new PearlRouter();
         ERC1967Proxy routerProxy = new ERC1967Proxy(
             address(routerImplementation), abi.encodeCall(routerImplementation.initialize, (pearlRouter, pearlQuoter))
         );
 
-        finder = new PearlRouteFinder(pearlFactory, address(routerProxy));
+        router = PearlRouter(address(routerProxy));
+        finder = new PearlRouteFinder(pearlFactory, address(router));
     }
 
     function test_findBestSwapPath() public {
@@ -38,5 +41,10 @@ contract PearlRouteFinderTest is Test {
 
         assertEq(keccak256(expectedPath), keccak256(path));
         assertGt(amountOut, 0);
+
+        deal(more, address(this), 0.1e18);
+
+        IERC20(more).approve(address(router), 0.1e18);
+        router.swap(path, 0.1e18, 0);
     }
 }

@@ -15,6 +15,8 @@ anvil = "http://localhost:8546"
 real = "${REAL_RPC_URL}"
 polygon = "${POLYGON_RPC_URL}"
 arbitrum_one = "${ARBITRUM_RPC_URL}"
+optimism = "${OPTIMISM_RPC_URL}"
+base = "${BASE_RPC_URL}"
 
 unreal = "${UNREAL_RPC_URL}"
 polygon_mumbai = "${MUMBAI_RPC_URL}"
@@ -24,10 +26,12 @@ sepolia = "${SEPOLIA_RPC_URL}"
 [etherscan]
 mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
 polygon = { key = "${ETHERSCAN_POLYGON_KEY}" }
-mumbai = { key = "${ETHERSCAN_POLYGON_KEY}" }
-# real = { key = "${ETHERSCAN_REAL_KEY}", url = "https://real.blockscout.com/api" }
+# real = { key = "", url = "https://real.blockscout.com/api" }
+optimism = { key = "", url = "https://optimism.blockscout.com/api" }
+base = { key = "", url = "https://base.blockscout.com/api" }
 
 unreal = { key = "", url = "https://unreal.blockscout.com/api" }
+mumbai = { key = "${ETHERSCAN_POLYGON_KEY}" }
 
 [fmt]
 wrap_comments = true

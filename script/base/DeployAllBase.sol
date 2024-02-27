@@ -18,6 +18,7 @@ import {VaultImplementationDeployer} from "../../src/factories/VaultImplementati
 import {VaultFactory} from "../../src/factories/VaultFactory.sol";
 import {StaticPriceOracle} from "../../src/oracles/StaticPriceOracle.sol";
 import {StackVault} from "../../src/vaults/StackVault.sol";
+import {AggregatorV3Wrapper} from "../../src/oracles/AggregatorV3Wrapper.sol";
 import {PearlRouter} from "../../src/periphery/PearlRouter.sol";
 import {PearlRouteFinder} from "../../src/periphery/PearlRouteFinder.sol";
 
@@ -47,6 +48,12 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault);
             address moreOracle = _deployMoreOracle(address(more));
             address ustbOracle = _deployUSTBOracle(address(_getUSTBAddress()));
+            if (_chain.chainId == 18231) {
+                _deployOracleWrapper(
+                    "DAIOracleWrapper", 0x665D4921fe931C0eA1390Ca4e0C422ba34d26169, 0xDC8Dd6e991cB1d9F2B4137294ee3EFE6D990d917
+                );
+                _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), 0xde2b7274F5248DF7D90Fc634501eE31406FeDAe6);
+            }
             address implementationDeployer = _deployVaultImplementationDeployer();
             address vaultDeployer = _deployVaultDeployer(vaultFactoryAddress, implementationDeployer);
             address vaultFactory = _deployVaultFactory(moreMinter, moreOracle, vaultDeployer, feeSplitter);
@@ -287,6 +294,29 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         _saveDeploymentAddress("USTBOracle", address(ustbOracle));
     }
 
+    function _deployOracleWrapper(string memory key, address token, address aggregatorV3)
+        private
+        returns (address wrappedOracleAddress)
+    {
+        bytes memory bytecode = abi.encodePacked(type(AggregatorV3Wrapper).creationCode);
+
+        wrappedOracleAddress =
+            vm.computeCreate2Address(_SALT, keccak256(abi.encodePacked(bytecode, abi.encode(token, aggregatorV3))));
+
+        AggregatorV3Wrapper wrappedOracle;
+
+        if (_isDeployed(wrappedOracleAddress)) {
+            console.log("Wrapped oracle for %s is already deployed to %s", token, wrappedOracleAddress);
+            wrappedOracle = AggregatorV3Wrapper(wrappedOracleAddress);
+        } else {
+            wrappedOracle = new AggregatorV3Wrapper{salt: _SALT}(token, aggregatorV3);
+            assert(wrappedOracleAddress == address(wrappedOracle));
+            console.log("Wrapped Oracle for %s deployed to %s", wrappedOracleAddress);
+        }
+
+        _saveDeploymentAddress(key, address(wrappedOracle));
+    }
+
     function _deployVaultImplementationDeployer() private returns (address vaultImplementationDeployerAddress) {
         bytes memory bytecode = abi.encodePacked(type(VaultImplementationDeployer).creationCode);
 
@@ -462,8 +492,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             return 111;
         } else if (chain == keccak256("base")) {
             return 184;
-        } else if (chain == keccak256("real")) {
-            return 0; // TODO
+        //} else if (chain == keccak256("real")) {
+        //    return 0; // TODO
         } else if (chain == keccak256("goerli")) {
             return 10121;
         } else if (chain == keccak256("sepolia")) {
@@ -502,8 +532,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             lzEndpoint = 0x3c2269811836af69497E5F486A85D7316753cf62;
         } else if (chainId == getChain("base").chainId) {
             lzEndpoint = 0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7;
-        } else if (chainId == getChain("real").chainId) {
-            lzEndpoint = address(0); // TODO
+        //} else if (chainId == getChain("real").chainId) {
+        //    lzEndpoint = address(0); // TODO
         } else if (chainId == getChain("goerli").chainId) {
             lzEndpoint = 0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23;
         } else if (chainId == getChain("sepolia").chainId) {
