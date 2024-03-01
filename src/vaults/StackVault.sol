@@ -4,6 +4,7 @@ pragma solidity =0.8.20;
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
@@ -47,6 +48,7 @@ contract StackVault is
     using InterestAccrualMath for InterestAccruingAmount;
     using FeeMath for uint256;
     using Math for uint256;
+    using SafeCast for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for BorrowToken;
 
@@ -55,7 +57,8 @@ contract StackVault is
     uint256 public constant DEFAULT_FLASHLOAN_FEE = 0.005e18;
 
     struct AccrualInfo {
-        uint256 lastAccrualTimestamp;
+        uint128 lastAccrualBlock;
+        uint128 lastAccrualTimestamp;
         uint256 feesEarned;
     }
 
@@ -330,11 +333,11 @@ contract StackVault is
         StackVaultStorage storage $ = _getStackVaultStorage();
         AccrualInfo memory accrual = $.accrualInfo;
         uint256 elapsedTime = block.timestamp - accrual.lastAccrualTimestamp;
-        // slither-disable-next-line incorrect-equality
-        if (elapsedTime == 0) {
+        if (block.number == accrual.lastAccrualBlock) {
             return;
         }
-        accrual.lastAccrualTimestamp = block.timestamp;
+        accrual.lastAccrualBlock = block.number.toUint128();
+        accrual.lastAccrualTimestamp = block.timestamp.toUint128();
 
         InterestAccruingAmount memory totalBorrow = $.totalBorrowAmount;
 
