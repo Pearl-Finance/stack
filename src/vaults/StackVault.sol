@@ -75,7 +75,6 @@ contract StackVault is
     event BorrowInterestRateUpdated(uint256 oldRate, uint256 newRate);
     event BorrowLimitUpdated(uint256 oldBorrowLimit, uint256 newBorrowLimit);
     event InterestAccrued(uint256 amount);
-    event FlashloanFeeReceived(uint256 amount);
     event Swap(address indexed initiator, address indexed swapTarget, bytes swapData, bytes swapResult);
     event VaultRetired();
     event VaultRevived();
@@ -601,27 +600,44 @@ contract StackVault is
 
             _checkSwapTarget(swapTarget);
 
-            uint256 balanceBefore = collateralToken.balanceOf(address(this));
+            uint256 collateralTokenBalanceBefore = collateralToken.balanceOf(address(this));
+            uint256 borrowTokenBalanceBefore = borrowToken.balanceOf(address(this));
             borrowToken.safeIncreaseAllowance(swapTarget, amount);
             bytes memory swapResult = swapTarget.functionCall(swapData);
             emit Swap(initiator, swapTarget, swapData, swapResult);
-            borrowToken.forceApprove(swapTarget, 0);
-            uint256 balanceAfter = collateralToken.balanceOf(address(this));
 
-            depositAmount += balanceAfter - balanceBefore;
-            uint256 share = _addAmountToCollateral(initiator, depositAmount);
-            emit CollateralDeposited(initiator, initiator, depositAmount, share);
+            uint256 swapAmountIn;
+
+            {
+                uint256 borrowTokenBalanceAfter = borrowToken.balanceOf(address(this));
+                swapAmountIn = borrowTokenBalanceBefore - borrowTokenBalanceAfter;
+
+                if (swapAmountIn < amount) {
+                    unchecked {
+                        borrowToken.forceApprove(swapTarget, 0);
+                    }
+                }
+            }
+
+            uint256 share;
+
+            {
+                uint256 collateralTokenBalanceAfter = collateralToken.balanceOf(address(this));
+                depositAmount += collateralTokenBalanceAfter - collateralTokenBalanceBefore;
+                share = _addAmountToCollateral(initiator, depositAmount);
+                emit CollateralDeposited(initiator, initiator, depositAmount, share);
+            }
 
             // borrow against collateral to repay flashloan
-            amount += fee;
-            share = _addAmountToDebt(initiator, amount);
-            emit Borrowed(initiator, initiator, amount, share);
+            swapAmountIn += fee;
+            share = _addAmountToDebt(initiator, swapAmountIn);
+            emit Borrowed(initiator, initiator, swapAmountIn, share);
         }
 
         _healthcheck(initiator);
 
         // repay flashloan
-        borrowToken.safeIncreaseAllowance(address(borrowToken), amount);
+        borrowToken.safeIncreaseAllowance(address(borrowToken), amount + fee);
 
         return keccak256("ERC3156FlashBorrower.onFlashLoan");
     }
