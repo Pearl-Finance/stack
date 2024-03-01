@@ -8,6 +8,7 @@ import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 
 import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import {IWETH9} from "../periphery/interfaces/IWETH9.sol";
@@ -29,7 +30,6 @@ import {InterestAccrualMath, InterestAccruingAmount} from "../libraries/Interest
  *      - Collateral deposits and withdrawals.
  *      - Borrowing against collateral with interest accrual.
  *      - Leveraged operations and liquidations.
- *      - Handling flash loans as per ERC-3156.
  *      Inherits from various OpenZeppelin contracts for upgradeability, ownership management, and reentrancy
  *      protection.
  *      Uses ERC-7201 namespaced storage pattern for robust and collision-resistant storage structure.
@@ -41,7 +41,7 @@ contract StackVault is
     IERC3156FlashBorrower,
     MulticallUpgradeable,
     OwnableUpgradeable,
-    SingleTokenFlashloanProvider,
+    ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
     using Address for address;
@@ -158,9 +158,7 @@ contract StackVault is
      * @param _collateralToken The address of the collateral token.
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(address factory, address _borrowToken, address _collateralToken)
-        SingleTokenFlashloanProvider(_collateralToken)
-    {
+    constructor(address factory, address _borrowToken, address _collateralToken) {
         _disableInitializers();
         address weth = IVaultFactory(factory).WETH();
         _isNativeCollateralToken = _collateralToken == Constants.ETH_ADDRESS || _collateralToken == weth;
@@ -188,7 +186,7 @@ contract StackVault is
     ) external initializer {
         __Multicall_init();
         __Ownable_init(OwnableUpgradeable(factory).owner());
-        __SingleTokenFlashloanProvider_init(DEFAULT_FLASHLOAN_FEE);
+        __ReentrancyGuard_init();
         StackVaultStorage storage $ = _getStackVaultStorage();
         if (_liquidationThreshold == 0 || _liquidationThreshold > Constants.LTV_PRECISION) {
             revert InvalidLiquidationThreshold(_liquidationThreshold, 1, Constants.LTV_PRECISION);
@@ -255,15 +253,6 @@ contract StackVault is
         StackVaultStorage storage $ = _getStackVaultStorage();
         $.interestRateMultiplier = _interestRateMultiplier;
         emit InterestRateMultiplierUpdated(_interestRateMultiplier);
-    }
-
-    /**
-     * @notice Sets the flash loan fee percentage.
-     * @dev Updates the fee for flash loans provided by the vault. Only callable by the factory.
-     * @param _flashloanFee The new flash loan fee as a percentage.
-     */
-    function setFlashloanFee(uint256 _flashloanFee) external onlyFactory {
-        _setFlashloanFee(_flashloanFee);
     }
 
     /**
@@ -980,19 +969,6 @@ contract StackVault is
     {
         uint256 fromValue = IOracle(fromOracle).valueOf(amount, rounding);
         return IOracle(toOracle).amountOf(fromValue, rounding);
-    }
-
-    /**
-     * @notice Handles the fee received from a flash loan.
-     * @dev Internal function to manage the distribution or handling of fees earned from providing flash loans.
-     * @param feeAmount The amount of fee received from the flash loan.
-     */
-    function _flashloanFeeReceived(uint256 feeAmount) internal override {
-        emit FlashloanFeeReceived(feeAmount);
-        StackVaultStorage storage $ = _getStackVaultStorage();
-        address factory = $._factory;
-        collateralToken.safeIncreaseAllowance(factory, feeAmount);
-        IVaultFactory(factory).collectFees(address(collateralToken), feeAmount);
     }
 
     /**
