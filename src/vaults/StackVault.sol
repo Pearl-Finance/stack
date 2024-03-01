@@ -563,6 +563,7 @@ contract StackVault is
             unchecked {
                 _addAmountToCollateral(account, withdrawalAmount - swapAmountIn);
             }
+            collateralToken.forceApprove(swapTarget, 0);
         }
 
         emit Deleveraged(account, withdrawalAmount, swapAmountOut);
@@ -605,6 +606,7 @@ contract StackVault is
             borrowToken.safeIncreaseAllowance(swapTarget, amount);
             bytes memory swapResult = swapTarget.functionCall(swapData);
             emit Swap(initiator, swapTarget, swapData, swapResult);
+            borrowToken.forceApprove(swapTarget, 0);
             uint256 balanceAfter = collateralToken.balanceOf(address(this));
 
             depositAmount += balanceAfter - balanceBefore;
