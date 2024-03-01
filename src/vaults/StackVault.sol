@@ -406,8 +406,8 @@ contract StackVault is
      */
     function withdrawCollateral(address to, uint256 amount) external healthcheck nonReentrant returns (uint256 share) {
         accrueInterest();
-        amount = _transferCollateralOut(to, amount);
         share = _subtractAmountFromCollateral(msg.sender, amount);
+        amount = _transferCollateralOut(to, amount);
         emit CollateralWithdrawn(msg.sender, to, amount, share);
     }
 
