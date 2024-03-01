@@ -37,6 +37,10 @@ contract DeployAll is DeployAllBase {
         return 0x9801EEB848987c0A8d6443912827bD36C288F8FB;
     }
 
+    function _getTangibleRevenueDistributor() internal pure override returns (address) {
+        return 0x56843df02d5A230929B3A572ACEf5048d5dB76db;
+    }
+
     function _getDeploymentChainAliases() internal pure override returns (string[] memory aliases) {
         aliases = new string[](2);
         aliases[0] = "unreal";

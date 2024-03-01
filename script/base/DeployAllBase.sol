@@ -45,12 +45,22 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             if (more.minter() != moreMinter) {
                 more.setMinter(moreMinter);
             }
-            address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault);
+            address[] memory feeReceivers;
+            if (_chain.chainId == 18231) {
+                feeReceivers = new address[](1);
+                feeReceivers[0] = _getTangibleRevenueDistributor();
+            } else {
+                feeReceivers = new address[](1);
+                feeReceivers[0] = _getGelatoMessageSender();
+            }
+            address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault, feeReceivers);
             address moreOracle = _deployMoreOracle(address(more));
             address ustbOracle = _deployUSTBOracle(address(_getUSTBAddress()));
             if (_chain.chainId == 18231) {
                 _deployOracleWrapper(
-                    "DAIOracleWrapper", 0x665D4921fe931C0eA1390Ca4e0C422ba34d26169, 0xDC8Dd6e991cB1d9F2B4137294ee3EFE6D990d917
+                    "DAIOracleWrapper",
+                    0x665D4921fe931C0eA1390Ca4e0C422ba34d26169,
+                    0xDC8Dd6e991cB1d9F2B4137294ee3EFE6D990d917
                 );
                 _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), 0xde2b7274F5248DF7D90Fc634501eE31406FeDAe6);
             }
@@ -94,6 +104,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
     function _getAMO() internal pure virtual returns (address);
 
     function _getWETH9() internal pure virtual returns (address);
+
+    function _getTangibleRevenueDistributor() internal pure virtual returns (address);
 
     /**
      * @dev Virtual function to be overridden in derived contracts to provide an array of chain aliases where the MORE
@@ -198,7 +210,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         _saveDeploymentAddress("MoreMinter", address(moreMinterProxy));
     }
 
-    function _deployFeeSplitter(address token, address moreStakingVaultAddress)
+    function _deployFeeSplitter(address token, address moreStakingVaultAddress, address[] memory feeReceivers)
         private
         returns (address feeSplitterProxy)
     {
@@ -222,13 +234,17 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         feeSplitterProxy = _deployProxy("FeeSplitter", address(feeSplitter), init);
         _saveDeploymentAddress("FeeSplitter", address(feeSplitterProxy));
 
-        address[] memory receivers = new address[](2);
-        uint96[] memory splits = new uint96[](2);
+        address[] memory receivers = new address[](1 + feeReceivers.length);
+        uint96[] memory splits = new uint96[](receivers.length);
+        uint96 split = 100 / uint96(receivers.length);
 
         receivers[0] = moreStakingVaultAddress;
-        receivers[1] = _deployer; // todo: distribute to rwa
-        splits[0] = 50;
-        splits[1] = 50;
+        splits[0] = split;
+
+        for (uint256 i = 0; i < feeReceivers.length; i++) {
+            receivers[i + 1] = feeReceivers[i];
+            splits[i + 1] = split;
+        }
 
         feeSplitter = FeeSplitter(feeSplitterProxy);
 
@@ -492,8 +508,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             return 111;
         } else if (chain == keccak256("base")) {
             return 184;
-        //} else if (chain == keccak256("real")) {
-        //    return 0; // TODO
+            //} else if (chain == keccak256("real")) {
+            //    return 0;
         } else if (chain == keccak256("goerli")) {
             return 10121;
         } else if (chain == keccak256("sepolia")) {
@@ -532,12 +548,12 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             lzEndpoint = 0x3c2269811836af69497E5F486A85D7316753cf62;
         } else if (chainId == getChain("base").chainId) {
             lzEndpoint = 0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7;
-        //} else if (chainId == getChain("real").chainId) {
-        //    lzEndpoint = address(0); // TODO
+            //} else if (chainId == getChain("real").chainId) {
+            //    lzEndpoint = address(0);
         } else if (chainId == getChain("goerli").chainId) {
             lzEndpoint = 0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23;
         } else if (chainId == getChain("sepolia").chainId) {
-            lzEndpoint = 0x6098e96a28E02f27B1e6BD381f870F1C8Bd169d3;
+            lzEndpoint = 0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1;
         } else if (chainId == getChain("polygon_mumbai").chainId) {
             lzEndpoint = 0xf69186dfBa60DdB133E91E9A4B5673624293d8F8;
         } else if (chainId == getChain("unreal").chainId) {

@@ -37,10 +37,15 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: WETH9 address not set");
     }
 
+    function _getTangibleRevenueDistributor() internal pure override returns (address) {
+        revert("DeployAll: Tangible Revenue Distributor address not set");
+    }
+
     function _getDeploymentChainAliases() internal pure override returns (string[] memory aliases) {
-        aliases = new string[](3);
+        aliases = new string[](4);
         aliases[0] = "real";
         aliases[1] = "polygon";
-        aliases[2] = "arbitrum_one";
+        aliases[2] = "base";
+        aliases[3] = "optimism";
     }
 }
