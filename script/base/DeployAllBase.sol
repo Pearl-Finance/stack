@@ -248,6 +248,12 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
         feeSplitter = FeeSplitter(feeSplitterProxy);
 
+        address distributor = _getGelatoMessageSender();
+
+        if (feeSplitter.distributor() != distributor) {
+            feeSplitter.setDistributor(distributor);
+        }
+
         FeeSplitter.FeeReceiver[] memory currentReceivers = feeSplitter.allReceivers();
 
         bool shouldUpdate = false;

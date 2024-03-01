@@ -66,6 +66,7 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         FeeReceiver[] feeReceivers;
         Checkpoint[CHECKPOINT_HISTORY_LENGTH] checkpoints;
         mapping(address => uint256) receiverPos;
+        address distributor;
     }
 
     // keccak256(abi.encode(uint256(keccak256("pearl.storage.FeeSplitter")) - 1)) & ~bytes32(uint256(0xff))
@@ -99,6 +100,22 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     }
 
     /**
+     * @notice Gets the address of the account that is allowed to distribute fees.
+     */
+    function distributor() external view returns (address) {
+        return _getFeeSplitterStorage().distributor;
+    }
+
+    /**
+     * @notice Sets the address of the account that is allowed to distribute fees.
+     * @param _distributor The address of the account that is allowed to distribute fees.
+     */
+    function setDistributor(address _distributor) external onlyOwner {
+        FeeSplitterStorage storage $ = _getFeeSplitterStorage();
+        $.distributor = _distributor;
+    }
+
+    /**
      * @notice Distributes the ERC20 tokens held by the contract to the registered fee receivers.
      * @dev This function calculates the distribution amount for each receiver based on their split ratio and the total
      * amount of tokens currently held by the contract. It iterates over the list of receivers in reverse order and
@@ -114,6 +131,9 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
      */
     function distribute() external {
         FeeSplitterStorage storage $ = _getFeeSplitterStorage();
+        if (msg.sender != $.distributor) {
+            revert UnauthorizedCaller();
+        }
         uint256 splitTotal = $.splitTotal;
         uint256 amount = IERC20(token).balanceOf(address(this));
         uint256 totalDistributed = $.totalDistributed;
