@@ -540,20 +540,8 @@ contract StackVault is
 
         _subtractAmountFromCollateral(account, withdrawalAmount);
 
-        uint256 swapAmountIn;
-        uint256 swapAmountOut;
-
-        {
-            uint256 collateralTokenBalanceBefore = collateralToken.balanceOf(address(this));
-            uint256 borrowTokenBalanceBefore = borrowToken.balanceOf(address(this));
-            collateralToken.safeIncreaseAllowance(swapTarget, withdrawalAmount);
-            bytes memory swapResult = swapTarget.functionCall(swapData);
-            emit Swap(account, swapTarget, swapData, swapResult);
-            uint256 collateralTokenBalanceAfter = collateralToken.balanceOf(address(this));
-            uint256 borrowTokenBalanceAfter = borrowToken.balanceOf(address(this));
-            swapAmountIn = collateralTokenBalanceBefore - collateralTokenBalanceAfter;
-            swapAmountOut = borrowTokenBalanceAfter - borrowTokenBalanceBefore;
-        }
+        (uint256 swapAmountIn, uint256 swapAmountOut) =
+            _safeSwap(collateralToken, borrowToken, withdrawalAmount, swapTarget, swapData);
 
         _subtractAmountFromDebt(account, swapAmountOut);
 
@@ -598,35 +586,12 @@ contract StackVault is
 
             (initiator, depositAmount, swapTarget, swapData) = abi.decode(data, (address, uint256, address, bytes));
 
-            _checkSwapTarget(swapTarget);
+            (uint256 swapAmountIn, uint256 swapAmountOut) =
+                _safeSwap(borrowToken, collateralToken, amount, swapTarget, swapData);
 
-            uint256 collateralTokenBalanceBefore = collateralToken.balanceOf(address(this));
-            uint256 borrowTokenBalanceBefore = borrowToken.balanceOf(address(this));
-            borrowToken.safeIncreaseAllowance(swapTarget, amount);
-            bytes memory swapResult = swapTarget.functionCall(swapData);
-            emit Swap(initiator, swapTarget, swapData, swapResult);
-
-            uint256 swapAmountIn;
-
-            {
-                uint256 borrowTokenBalanceAfter = borrowToken.balanceOf(address(this));
-                swapAmountIn = borrowTokenBalanceBefore - borrowTokenBalanceAfter;
-
-                if (swapAmountIn < amount) {
-                    unchecked {
-                        borrowToken.forceApprove(swapTarget, 0);
-                    }
-                }
-            }
-
-            uint256 share;
-
-            {
-                uint256 collateralTokenBalanceAfter = collateralToken.balanceOf(address(this));
-                depositAmount += collateralTokenBalanceAfter - collateralTokenBalanceBefore;
-                share = _addAmountToCollateral(initiator, depositAmount);
-                emit CollateralDeposited(initiator, initiator, depositAmount, share);
-            }
+            depositAmount += swapAmountOut;
+            uint256 share = _addAmountToCollateral(initiator, depositAmount);
+            emit CollateralDeposited(initiator, initiator, depositAmount, share);
 
             // borrow against collateral to repay flashloan
             swapAmountIn += fee;
@@ -1049,6 +1014,49 @@ contract StackVault is
         }
         require(success, "StackVault: Failed to send ETH");
         sent = amount;
+    }
+
+    /**
+     * @dev Performs a token swap by calling an external contract, ensuring the swap does not exceed the specified input
+     * amount. This internal function is used to execute a swap operation from one token to another, utilizing a
+     * specified swap target contract.
+     *
+     * The function checks the balance of the `fromToken` before and after the swap to calculate the actual input amount
+     * (`swapAmountIn`), and similarly, it checks the balance of the `toToken` to determine the output amount
+     * (`swapAmountOut`). It ensures that the swap target is a trusted contract as defined by the vault factory. The
+     * function emits a `Swap` event containing details of the swap operation.
+     *
+     * @param fromToken The token being swapped from.
+     * @param toToken The token being swapped to.
+     * @param amount The maximum amount of `fromToken` to be swapped. The actual amount swapped may be less.
+     * @param swapTarget The address of the contract executing the swap.
+     * @param swapData The calldata to be sent to `swapTarget` to execute the swap.
+     * @return swapAmountIn The actual amount of `fromToken` that was swapped.
+     * @return swapAmountOut The amount of `toToken` received from the swap.
+     */
+    function _safeSwap(IERC20 fromToken, IERC20 toToken, uint256 amount, address swapTarget, bytes memory swapData)
+        private
+        returns (uint256 swapAmountIn, uint256 swapAmountOut)
+    {
+        _checkSwapTarget(swapTarget);
+
+        uint256 fromTokenBalanceBefore = fromToken.balanceOf(address(this));
+        uint256 toTokenBalanceBefore = toToken.balanceOf(address(this));
+
+        fromToken.safeIncreaseAllowance(swapTarget, amount);
+
+        bytes memory swapResult = swapTarget.functionCall(swapData);
+        emit Swap(msg.sender, swapTarget, swapData, swapResult);
+
+        uint256 fromTokenBalanceAfter = fromToken.balanceOf(address(this));
+        uint256 toTokenBalanceAfter = toToken.balanceOf(address(this));
+
+        swapAmountIn = fromTokenBalanceBefore - fromTokenBalanceAfter;
+        swapAmountOut = toTokenBalanceAfter - toTokenBalanceBefore;
+
+        if (swapAmountOut < amount) {
+            fromToken.forceApprove(swapTarget, 0);
+        }
     }
 
     /**
