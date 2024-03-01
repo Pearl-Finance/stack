@@ -33,6 +33,9 @@ contract InterestRateOracle is Ownable, CommonErrors {
      * @param initialAPR The initial APR for the token.
      */
     constructor(address _token, address _owner, address _manager, uint256 initialAPR) Ownable(_owner) {
+        if (_token == address(0) || _manager == address(0)) {
+            revert InvalidZeroAddress();
+        }
         token = _token;
         manager = _manager;
         apr = initialAPR;

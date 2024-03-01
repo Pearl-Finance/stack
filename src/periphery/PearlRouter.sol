@@ -7,6 +7,8 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+import {CommonErrors} from "../interfaces/CommonErrors.sol";
+
 import {IQuoter} from "./interfaces/IQuoter.sol";
 import {IRouter} from "./interfaces/IRouter.sol";
 
@@ -21,7 +23,7 @@ import {IRouter} from "./interfaces/IRouter.sol";
  *      Inherits from OwnableUpgradeable and UUPSUpgradeable for ownership management and upgrade functionality.
  * @author SeaZarrgh LaBuoy
  */
-contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable {
+contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     using SafeERC20 for IERC20;
 
     /// @custom:storage-location erc7201:pearl.storage.PearlRouter
@@ -69,6 +71,9 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable {
      */
     function initialize(address swapRouter, address quoter) external initializer {
         __Ownable_init(msg.sender);
+        if (swapRouter == address(0) || quoter == address(0)) {
+            revert InvalidZeroAddress();
+        }
         PearlRouterStorage storage $ = _getPearlRouterStorage();
         $.swapRouter = swapRouter;
         $.quoter = quoter;

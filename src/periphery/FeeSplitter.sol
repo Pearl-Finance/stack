@@ -11,6 +11,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ERC20BurnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 
+import {CommonErrors} from "../interfaces/CommonErrors.sol";
+
 /**
  * @title FeeSplitter Contract
  * @author SeaZarrgh LaBuoy
@@ -33,12 +35,14 @@ import {ERC20BurnableUpgradeable} from
  * The contract is particularly suited for scenarios where ongoing and fair distribution of fees or revenues is
  * required.
  */
-contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable {
+contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     using Math for uint256;
     using SafeERC20 for IERC20;
 
     uint256 private constant CHECKPOINT_INTERVAL = 1 days;
     uint256 private constant CHECKPOINT_HISTORY_LENGTH = 2;
+
+    address public immutable token;
 
     error InvalidSplitValue(uint96 value);
     error ReceiverAlreadyAdded(address receiver);
@@ -56,7 +60,6 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable {
 
     /// @custom:storage-location erc7201:pearl.storage.FeeSplitter
     struct FeeSplitterStorage {
-        address token;
         uint256 splitTotal;
         uint256 lastCheckpointIndex;
         uint256 totalDistributed;
@@ -76,21 +79,23 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable {
         }
     }
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    /**
+     * @notice Initializes the FeeSplitter contract with a specified token.
+     * @param _token The address of the ERC20 token that will be distributed by this contract.
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(address _token) {
         _disableInitializers();
+        if (_token == address(0)) {
+            revert InvalidZeroAddress();
+        }
+        token = _token;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    /**
-     * @notice Initializes the FeeSplitter contract with a specified token.
-     * @param token The address of the ERC20 token that will be distributed by this contract.
-     */
-    function initialize(address token) external initializer {
+    function initialize() external initializer {
         __Ownable_init(msg.sender);
-        FeeSplitterStorage storage $ = _getFeeSplitterStorage();
-        $.token = token;
     }
 
     /**
@@ -109,9 +114,8 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable {
      */
     function distribute() external {
         FeeSplitterStorage storage $ = _getFeeSplitterStorage();
-        address token = $.token;
         uint256 splitTotal = $.splitTotal;
-        uint256 amount = IERC20($.token).balanceOf(address(this));
+        uint256 amount = IERC20(token).balanceOf(address(this));
         uint256 totalDistributed = $.totalDistributed;
         if (splitTotal != 0) {
             FeeReceiver[] storage feeReceivers = $.feeReceivers;

@@ -29,6 +29,7 @@ abstract contract VaultFactoryConfiguration is CommonErrors, OwnableUpgradeable,
     event DebtCollectorChanged(address indexed oldDebtCollector, address indexed newDebtCollector);
     event FeeReceiverChanged(address indexed oldFeeReceiver, address indexed newFeeReceiver);
     event PenaltyReceiverChanged(address indexed oldPenaltyReceiver, address indexed newPenaltyReceiver);
+    event VaultDeployerChanged(address indexed oldVaultDeployer, address indexed newVaultDeployer);
     event LiquidationPenaltyFeeChanged(uint256 oldFee, uint256 newFee);
     event LiquidatorPenaltyShareChanged(uint96 oldShare, uint96 newShare);
 
@@ -148,6 +149,9 @@ abstract contract VaultFactoryConfiguration is CommonErrors, OwnableUpgradeable,
      */
     function setBorrowTokenOracle(address newOracle) public onlyOwner {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
+        if (newOracle == address(0)) {
+            revert InvalidZeroAddress();
+        }
         address oldOracle = $.borrowTokenOracle;
         if (oldOracle == newOracle) {
             revert ValueUnchanged();
@@ -331,6 +335,14 @@ abstract contract VaultFactoryConfiguration is CommonErrors, OwnableUpgradeable,
      */
     function setVaultDeployer(address newVaultDeployer) public onlyOwner {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
+        if (newVaultDeployer == address(0)) {
+            revert InvalidZeroAddress();
+        }
+        address oldVaultDeployer = $.vaultDeployer;
+        if (oldVaultDeployer == newVaultDeployer) {
+            revert ValueUnchanged();
+        }
         $.vaultDeployer = newVaultDeployer;
+        emit VaultDeployerChanged(oldVaultDeployer, newVaultDeployer);
     }
 }

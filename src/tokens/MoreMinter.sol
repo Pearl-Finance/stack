@@ -45,8 +45,11 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
      * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(address more) {
-        MORE = more;
         _disableInitializers();
+        if (more == address(0)) {
+            revert InvalidZeroAddress();
+        }
+        MORE = more;
     }
 
     /**

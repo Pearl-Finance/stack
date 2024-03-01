@@ -37,6 +37,9 @@ contract VaultDeployer is CommonErrors, OwnableUpgradeable, UUPSUpgradeable {
      */
     constructor(address weth, address _factory, address _implementationDeployer) {
         _disableInitializers();
+        if (weth == address(0) || _factory == address(0) || _implementationDeployer == address(0)) {
+            revert InvalidZeroAddress();
+        }
         WETH = weth;
         factory = _factory;
         implementationDeployer = _implementationDeployer;

@@ -214,7 +214,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         private
         returns (address feeSplitterProxy)
     {
-        bytes memory bytecode = abi.encodePacked(type(FeeSplitter).creationCode);
+        bytes memory bytecode = abi.encodePacked(type(FeeSplitter).creationCode, abi.encode(token));
 
         address feeSplitterAddress = vm.computeCreate2Address(_SALT, keccak256(abi.encodePacked(bytecode)));
 
@@ -224,12 +224,12 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             console.log("Fee Splitter is already deployed to %s", feeSplitterAddress);
             feeSplitter = FeeSplitter(feeSplitterAddress);
         } else {
-            feeSplitter = new FeeSplitter{salt: _SALT}();
+            feeSplitter = new FeeSplitter{salt: _SALT}(token);
             assert(feeSplitterAddress == address(feeSplitter));
             console.log("Fee Splitter deployed to %s", feeSplitterAddress);
         }
 
-        bytes memory init = abi.encodeWithSelector(FeeSplitter.initialize.selector, token);
+        bytes memory init = abi.encodeCall(feeSplitter.initialize, ());
 
         feeSplitterProxy = _deployProxy("FeeSplitter", address(feeSplitter), init);
         _saveDeploymentAddress("FeeSplitter", address(feeSplitterProxy));

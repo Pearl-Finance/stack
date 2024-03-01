@@ -7,6 +7,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IOracle} from "../interfaces/IOracle.sol";
+import {CommonErrors} from "../interfaces/CommonErrors.sol";
 import {Constants} from "../libraries/Constants.sol";
 
 /**
@@ -17,7 +18,7 @@ import {Constants} from "../libraries/Constants.sol";
  *      asset price volatility needs to be mitigated.
  * @author SeaZarrgh LaBuoy
  */
-contract CappedPriceOracle is IOracle {
+contract CappedPriceOracle is IOracle, CommonErrors {
     using Math for uint256;
 
     address public immutable underlyingOracle;
@@ -31,6 +32,9 @@ contract CappedPriceOracle is IOracle {
      *                  considered.
      */
     constructor(address _underlyingOracle, uint256 _priceCap) {
+        if (_underlyingOracle == address(0)) {
+            revert InvalidZeroAddress();
+        }
         underlyingOracle = _underlyingOracle;
         priceCap = _priceCap;
     }

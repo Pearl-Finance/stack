@@ -69,6 +69,9 @@ contract VaultFactory is
      */
     constructor(address weth, address _borrowTokenMinter) VaultFactoryConfiguration(_borrowTokenMinter) {
         _disableInitializers();
+        if (weth == address(0)) {
+            revert InvalidZeroAddress();
+        }
         WETH = weth;
     }
 
@@ -101,12 +104,12 @@ contract VaultFactory is
             revert InvalidZeroAddress();
         }
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
-        $.borrowTokenOracle = _borrowTokenOracle;
         $.interestRateManager = msg.sender;
         setDebtCollector(msg.sender);
         setLiquidatorPenaltyShare(DEFAULT_LIQUIDATOR_PENALTY_SHARE);
-        setFeeReceiver(_feeReceiver);
         setVaultDeployer(_vaultDeployer);
+        setBorrowTokenOracle(_borrowTokenOracle);
+        setFeeReceiver(_feeReceiver);
     }
 
     /**
