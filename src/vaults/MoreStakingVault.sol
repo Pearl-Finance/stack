@@ -42,4 +42,8 @@ contract MoreStakingVault is ERC4626Upgradeable, OwnableUpgradeable, UUPSUpgrade
      * @param newImplementation The address of the new contract implementation.
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    function _decimalsOffset() internal view virtual override returns (uint8) {
+        return 1;
+    }
 }
