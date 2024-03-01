@@ -223,7 +223,10 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable {
         if (pos == 0) {
             revert ReceiverNotFound(receiver);
         }
-        (, uint96 currentSplit) = _unsafeFeeReceiverAccess($.feeReceivers, pos - 1);
+        unchecked {
+            --pos;
+        }
+        (, uint96 currentSplit) = _unsafeFeeReceiverAccess($.feeReceivers, pos);
         uint256 splitTotal;
         unchecked {
             splitTotal = $.splitTotal - currentSplit;
@@ -232,10 +235,7 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable {
         unchecked {
             $.splitTotal = splitTotal + split;
         }
-        uint256 receiversLength = $.feeReceivers.length;
-        if (pos != receiversLength) {
-            $.feeReceivers[pos - 1].split = split;
-        }
+        $.feeReceivers[pos].split = split;
     }
 
     /**
