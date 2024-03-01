@@ -995,7 +995,7 @@ contract StackVault is
      */
     function _transferNativeIn(address from, uint256 amount) internal returns (uint256 received) {
         if (msg.value == 0) {
-            require(_WETH.transferFrom(from, address(this), amount));
+            _WETH.transferFrom(from, address(this), amount);
         } else {
             require(msg.value == amount, "StackVault: Incorrect ETH value");
             _WETH.deposit{value: amount}();
