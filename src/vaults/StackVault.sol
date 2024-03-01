@@ -13,7 +13,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 
 import {IWETH9} from "../periphery/interfaces/IWETH9.sol";
 import {BorrowToken} from "../tokens/BorrowToken.sol";
-import {SingleTokenFlashloanProvider} from "../tokens/SingleTokenFlashloanProvider.sol";
 
 import {CommonErrors} from "../interfaces/CommonErrors.sol";
 import {IOracle} from "../interfaces/IOracle.sol";
