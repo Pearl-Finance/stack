@@ -965,6 +965,7 @@ contract StackVault is
         if (_isNativeCollateralToken) {
             received = _transferNativeIn(from, amount);
         } else {
+            require(msg.value == 0, "StackVault: Unexpected ETH value");
             address to = address(this);
             uint256 balanceBefore = collateralToken.balanceOf(to);
             collateralToken.safeTransferFrom(from, to, amount);
