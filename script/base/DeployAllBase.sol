@@ -21,6 +21,7 @@ import {StackVault} from "../../src/vaults/StackVault.sol";
 import {AggregatorV3Wrapper} from "../../src/oracles/AggregatorV3Wrapper.sol";
 import {PearlRouter} from "../../src/periphery/PearlRouter.sol";
 import {PearlRouteFinder} from "../../src/periphery/PearlRouteFinder.sol";
+import {ERC4626Router} from "../../src/periphery/ERC4626Router.sol";
 
 abstract contract DeployAllBase is PearlDeploymentScript {
     string private constant VAULT_FACTORY_KEY = "VaultFactory-v4";
@@ -85,6 +86,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
                     }
                 }
             }
+            _deployERC4626Router();
             vm.stopBroadcast();
         }
     }
@@ -231,7 +233,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
         bytes memory init = abi.encodeCall(feeSplitter.initialize, ());
 
-        feeSplitterProxy = _deployProxy("FeeSplitter", address(feeSplitter), init);
+        feeSplitterProxy = _deployProxy("FeeSplitter-v2", address(feeSplitter), init);
         _saveDeploymentAddress("FeeSplitter", address(feeSplitterProxy));
 
         address[] memory receivers = new address[](1 + feeReceivers.length);
@@ -487,6 +489,25 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         }
 
         _saveDeploymentAddress("PearlRouteFinder", address(pearlRouteFinder));
+    }
+
+    function _deployERC4626Router() private returns (address erc4626RouterAddress) {
+        bytes memory bytecode = abi.encodePacked(type(ERC4626Router).creationCode);
+
+        erc4626RouterAddress = vm.computeCreate2Address(_SALT, keccak256(bytecode));
+
+        ERC4626Router erc4626Router;
+
+        if (_isDeployed(erc4626RouterAddress)) {
+            console.log("ERC4626 Router is already deployed to %s", erc4626RouterAddress);
+            erc4626Router = ERC4626Router(erc4626RouterAddress);
+        } else {
+            erc4626Router = new ERC4626Router{salt: _SALT}();
+            assert(erc4626RouterAddress == address(erc4626Router));
+            console.log("ERC4626 Router deployed to %s", erc4626RouterAddress);
+        }
+
+        _saveDeploymentAddress("ERC4626Router", address(erc4626Router));
     }
 
     /**
