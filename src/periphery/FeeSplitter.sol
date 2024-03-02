@@ -370,7 +370,7 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         Checkpoint memory oldestCheckpoint = $.checkpoints[(lastCheckpointIndex + 1) % CHECKPOINT_HISTORY_LENGTH];
         Checkpoint memory latestCheckpoint = $.checkpoints[lastCheckpointIndex];
 
-        if (latestCheckpoint.timestamp <= oldestCheckpoint.timestamp) return 0;
+        if (latestCheckpoint.timestamp <= oldestCheckpoint.timestamp || oldestCheckpoint.timestamp == 0) return 0;
 
         uint256 timeElapsed;
 
