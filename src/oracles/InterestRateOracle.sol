@@ -39,6 +39,7 @@ contract InterestRateOracle is Ownable, CommonErrors {
         token = _token;
         manager = _manager;
         apr = initialAPR;
+        _lastUpdateTimestamp = block.timestamp;
     }
 
     /**
