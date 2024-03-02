@@ -120,8 +120,8 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
      * @dev This function calculates the distribution amount for each receiver based on their split ratio and the total
      * amount of tokens currently held by the contract. It iterates over the list of receivers in reverse order and
      * transfers the calculated token amount to each. This reverse iteration is performed for gas efficiency, as
-     * comparing the loop counter against zero is cheaper than comparing two values. The function can be called by any
-     * external actor, facilitating flexible distribution schedules.
+     * comparing the loop counter against zero is cheaper than comparing two values. The function can be called by the
+     * distributor account, allowing for controlled and secure distribution of tokens.
      *
      * Key aspects of the distribution logic include:
      *  - Proportional Distribution: The split amount for each receiver is proportional to their registered split ratio.
@@ -134,10 +134,18 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         if (msg.sender != $.distributor) {
             revert UnauthorizedCaller();
         }
-        uint256 splitTotal = $.splitTotal;
+        _distribute($, true);
+    }
+
+    /**
+     * @notice Distributes the ERC20 tokens held by the contract to the registered fee receivers.
+     * @param $ The storage structure of the FeeSplitter contract.
+     */
+    function _distribute(FeeSplitterStorage storage $, bool forceCheckpoint) internal {
         uint256 amount = IERC20(token).balanceOf(address(this));
+        uint256 splitTotal = $.splitTotal;
         uint256 totalDistributed = $.totalDistributed;
-        if (splitTotal != 0) {
+        if (splitTotal != 0 && amount != 0) {
             FeeReceiver[] storage feeReceivers = $.feeReceivers;
             for (uint256 i = feeReceivers.length; i != 0;) {
                 unchecked {
@@ -151,7 +159,9 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
                 }
             }
         }
-        _updateCheckpoints(totalDistributed);
+        if (forceCheckpoint || totalDistributed != $.totalDistributed) {
+            _updateCheckpoints(totalDistributed);
+        }
     }
 
     /**
@@ -176,6 +186,7 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         if ($.receiverPos[receiver] != 0) {
             revert ReceiverAlreadyAdded(receiver);
         }
+        _distribute($, false);
         _validateSplitValue(split, $.splitTotal);
         $.splitTotal += split;
         $.feeReceivers.push(FeeReceiver(receiver, split));
@@ -208,6 +219,7 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         if (pos == 0) {
             revert ReceiverNotFound(receiver);
         }
+        _distribute($, false);
         unchecked {
             index = pos - 1;
         }
@@ -247,6 +259,7 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         if (pos == 0) {
             revert ReceiverNotFound(receiver);
         }
+        _distribute($, false);
         unchecked {
             --pos;
         }
@@ -287,6 +300,9 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         FeeSplitterStorage storage $ = _getFeeSplitterStorage();
         uint256 numReceivers = receivers.length;
         assert(numReceivers == splits.length);
+
+        _distribute($, false);
+
         uint256 splitTotal;
         uint256 currentLength = $.feeReceivers.length;
 
