@@ -101,11 +101,14 @@ contract VaultFactory is
      * @param _vaultDeployer The address of the vault deployer.
      * @param _borrowTokenOracle The address of the oracle for the borrow token.
      * @param _feeReceiver The address where collected fees will be sent.
+     * @param _penaltyReceiver The address where shares of liquidation penalties will be sent.
      */
-    function initialize(address _vaultDeployer, address _borrowTokenOracle, address _feeReceiver)
-        external
-        initializer
-    {
+    function initialize(
+        address _vaultDeployer,
+        address _borrowTokenOracle,
+        address _feeReceiver,
+        address _penaltyReceiver
+    ) external initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         __Multicall_init();
@@ -113,12 +116,13 @@ contract VaultFactory is
             revert InvalidZeroAddress();
         }
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
-        $.interestRateManager = msg.sender;
-        setDebtCollector(msg.sender);
-        setLiquidatorPenaltyShare(DEFAULT_LIQUIDATOR_PENALTY_SHARE);
-        setVaultDeployer(_vaultDeployer);
-        setBorrowTokenOracle(_borrowTokenOracle);
-        setFeeReceiver(_feeReceiver);
+        _updateBorrowTokenOracle($, address(0), _borrowTokenOracle);
+        _updateInterestRateManager($, address(0), msg.sender);
+        _updateDebtCollector($, address(0), msg.sender);
+        _updateFeeReceiver($, address(0), _feeReceiver);
+        _updatePenaltyReceiver($, address(0), _penaltyReceiver);
+        _updateLiquityPenaltyShare($, 0, DEFAULT_LIQUIDATOR_PENALTY_SHARE);
+        _updateVaultDeployer($, address(0), _vaultDeployer);
     }
 
     /**

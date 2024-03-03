@@ -411,8 +411,10 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             console.log("Vault Factory deployed to %s", vaultFactoryAddress);
         }
 
-        bytes memory init =
-            abi.encodeWithSelector(VaultFactory.initialize.selector, vaultDeployer, borrowTokenOracle, feeReceiver);
+        address penaltyReceiver = _getTeamWallet();
+        bytes memory init = abi.encodeWithSelector(
+            VaultFactory.initialize.selector, vaultDeployer, borrowTokenOracle, feeReceiver, penaltyReceiver
+        );
 
         vaultFactoryProxy = _deployProxy(VAULT_FACTORY_KEY, address(vaultFactory), init);
         vaultFactory = VaultFactory(vaultFactoryProxy);

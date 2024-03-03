@@ -10,6 +10,12 @@ pragma solidity =0.8.20;
  * @author SeaZarrgh LaBuoy
  */
 interface CommonErrors {
+    /// @notice Error used to indicate an invalid fee value.
+    error InvalidFee(uint256 min, uint256 max, uint256 actual);
+
+    /// @notice Error used to indicate an invalid share value.
+    error InvalidShare(uint256 min, uint256 max, uint256 actual);
+
     /// @notice Error used to indicate operations involving an invalid zero address.
     error InvalidZeroAddress();
 

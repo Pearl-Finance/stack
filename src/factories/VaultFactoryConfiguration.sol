@@ -161,14 +161,27 @@ abstract contract VaultFactoryConfiguration is
      *      Reverts if the new oracle address is the same as the current one to prevent unnecessary transactions.
      * @param newOracle The address of the new oracle for the borrow token.
      */
-    function setBorrowTokenOracle(address newOracle) public onlyOwner {
+    function setBorrowTokenOracle(address newOracle) external onlyOwner {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
-        if (newOracle == address(0)) {
-            revert InvalidZeroAddress();
-        }
         address oldOracle = $.borrowTokenOracle;
         if (oldOracle == newOracle) {
             revert ValueUnchanged();
+        }
+        _updateBorrowTokenOracle($, oldOracle, newOracle);
+    }
+
+    /**
+     * @dev Internal function to update the borrow token oracle address in the VaultFactoryStorage.
+     * It validates the new oracle address is not the zero address, updates the storage, and emits a
+     * `BorrowTokenOracleChanged` event. This function is intended to be called by public or external functions that
+     * perform additional validations and access control, such as `setBorrowTokenOracle`.
+     * @param $ The reference to the VaultFactoryStorage structure.
+     * @param oldOracle The address of the current borrow token oracle.
+     * @param newOracle The address of the new borrow token oracle to be set.
+     */
+    function _updateBorrowTokenOracle(VaultFactoryStorage storage $, address oldOracle, address newOracle) internal {
+        if (newOracle == address(0)) {
+            revert InvalidZeroAddress();
         }
         $.borrowTokenOracle = newOracle;
         emit BorrowTokenOracleChanged(oldOracle, newOracle);
@@ -182,12 +195,27 @@ abstract contract VaultFactoryConfiguration is
      *      Reverts if the new manager address is the same as the current one to avoid unnecessary updates.
      * @param newManager The address of the new interest rate manager.
      */
-    function setInterestRateManager(address newManager) public onlyOwner {
+    function setInterestRateManager(address newManager) external onlyOwner {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
         address oldManager = $.interestRateManager;
         if (oldManager == newManager) {
             revert ValueUnchanged();
         }
+        _updateInterestRateManager($, oldManager, newManager);
+    }
+
+    /**
+     * @dev Internal function to update the interest rate manager address in the VaultFactoryStorage.
+     * Updates the storage with the new manager's address and emits an `InterestRateManagerChanged` event.
+     * Designed to be invoked by higher-level functions with appropriate access control checks, like
+     * `setInterestRateManager`, to ensure that only authorized users can change the interest rate manager.
+     * @param $ The reference to the VaultFactoryStorage structure.
+     * @param oldManager The current interest rate manager's address.
+     * @param newManager The new interest rate manager's address to be updated to.
+     */
+    function _updateInterestRateManager(VaultFactoryStorage storage $, address oldManager, address newManager)
+        internal
+    {
         $.interestRateManager = newManager;
         emit InterestRateManagerChanged(oldManager, newManager);
     }
@@ -201,7 +229,7 @@ abstract contract VaultFactoryConfiguration is
      * @param target The address of the swap target to update.
      * @param trusted A boolean indicating whether the target should be trusted.
      */
-    function setTrustedSwapTarget(address target, bool trusted) public onlyOwner {
+    function setTrustedSwapTarget(address target, bool trusted) external onlyOwner {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
         bool wasTrusted = $.trustedSwapTargets[target];
         if (wasTrusted == trusted) {
@@ -246,7 +274,7 @@ abstract contract VaultFactoryConfiguration is
      *      Reverts if the new interest rate is the same as the current rate to prevent unnecessary updates.
      * @param newInterestRate The new borrow interest rate to be set.
      */
-    function overrideBorrowInterestRate(uint256 newInterestRate) public onlyOwner {
+    function overrideBorrowInterestRate(uint256 newInterestRate) external onlyOwner {
         accrueInterest();
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
         uint256 oldInterestRate = $.borrowInterestRate;
@@ -266,12 +294,27 @@ abstract contract VaultFactoryConfiguration is
      *      Reverts if the new debt collector's address is the same as the current one to prevent unnecessary updates.
      * @param newDebtCollector The address of the new debt collector.
      */
-    function setDebtCollector(address newDebtCollector) public onlyOwner {
+    function setDebtCollector(address newDebtCollector) external onlyOwner {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
         address oldDebtCollector = $.debtCollector;
         if (oldDebtCollector == newDebtCollector) {
             revert ValueUnchanged();
         }
+        _updateDebtCollector($, oldDebtCollector, newDebtCollector);
+    }
+
+    /**
+     * @dev Internal function to update the debt collector's address in the VaultFactoryStorage.
+     * It ensures the new address is properly set in storage and triggers a `DebtCollectorChanged` event.
+     * This method is called by public-facing functions such as `setDebtCollector`, which handle necessary authorization
+     * and validation checks before proceeding with the update.
+     * @param $ The reference to the VaultFactoryStorage structure.
+     * @param oldDebtCollector The address of the current debt collector.
+     * @param newDebtCollector The address of the new debt collector to be set.
+     */
+    function _updateDebtCollector(VaultFactoryStorage storage $, address oldDebtCollector, address newDebtCollector)
+        internal
+    {
         $.debtCollector = newDebtCollector;
         emit DebtCollectorChanged(oldDebtCollector, newDebtCollector);
     }
@@ -285,14 +328,29 @@ abstract contract VaultFactoryConfiguration is
      *      Reverts if the new fee receiver's address is either the zero address or the same as the current one.
      * @param newFeeReceiver The address of the new fee receiver.
      */
-    function setFeeReceiver(address newFeeReceiver) public onlyOwner {
+    function setFeeReceiver(address newFeeReceiver) external onlyOwner {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
-        if (newFeeReceiver == address(0)) {
-            revert InvalidZeroAddress();
-        }
         address oldFeeReceiver = $.feeReceiver;
         if (oldFeeReceiver == newFeeReceiver) {
             revert ValueUnchanged();
+        }
+        _updateFeeReceiver($, oldFeeReceiver, newFeeReceiver);
+    }
+
+    /**
+     * @dev Internal function to update the fee receiver's address in the VaultFactoryStorage.
+     * Validates that the new address is not the zero address, updates the storage, and emits a `FeeReceiverChanged`
+     * event. Aimed to be utilized by functions like `setFeeReceiver` that include checks for authorization and ensure
+     * the validity of the new address.
+     * @param $ The reference to the VaultFactoryStorage structure.
+     * @param oldFeeReceiver The address of the current fee receiver.
+     * @param newFeeReceiver The address of the new fee receiver to be updated to.
+     */
+    function _updateFeeReceiver(VaultFactoryStorage storage $, address oldFeeReceiver, address newFeeReceiver)
+        internal
+    {
+        if (newFeeReceiver == address(0)) {
+            revert InvalidZeroAddress();
         }
         $.feeReceiver = newFeeReceiver;
         emit FeeReceiverChanged(oldFeeReceiver, newFeeReceiver);
@@ -308,14 +366,31 @@ abstract contract VaultFactoryConfiguration is
      *      Reverts if the new penalty receiver's address is either the zero address or the same as the current one.
      * @param newPenaltyReceiver The address of the new penalty receiver.
      */
-    function setPenaltyReceiver(address newPenaltyReceiver) public onlyOwner {
+    function setPenaltyReceiver(address newPenaltyReceiver) external onlyOwner {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
-        if (newPenaltyReceiver == address(0)) {
-            revert InvalidZeroAddress();
-        }
         address oldPenaltyReceiver = $.penaltyReceiver;
         if (oldPenaltyReceiver == newPenaltyReceiver) {
             revert ValueUnchanged();
+        }
+        _updatePenaltyReceiver($, oldPenaltyReceiver, newPenaltyReceiver);
+    }
+
+    /**
+     * @dev Internal function to update the penalty receiver's address in the VaultFactoryStorage.
+     * Checks for a non-zero new address, updates the storage, and triggers a `PenaltyReceiverChanged` event.
+     * This function is designed to be called by externally accessible functions such as `setPenaltyReceiver`, which
+     * perform necessary validations and ensure that only authorized entities can update the penalty receiver.
+     * @param $ The reference to the VaultFactoryStorage structure.
+     * @param oldPenaltyReceiver The address of the existing penalty receiver.
+     * @param newPenaltyReceiver The new penalty receiver's address to be set.
+     */
+    function _updatePenaltyReceiver(
+        VaultFactoryStorage storage $,
+        address oldPenaltyReceiver,
+        address newPenaltyReceiver
+    ) internal {
+        if (newPenaltyReceiver == address(0)) {
+            revert InvalidZeroAddress();
         }
         $.penaltyReceiver = newPenaltyReceiver;
         emit PenaltyReceiverChanged(oldPenaltyReceiver, newPenaltyReceiver);
@@ -331,11 +406,27 @@ abstract contract VaultFactoryConfiguration is
      *      Reverts if the new share is the same as the current share to avoid unnecessary updates.
      * @param newShare The new share of liquidation penalties to be allocated to the liquidator.
      */
-    function setLiquidatorPenaltyShare(uint96 newShare) public onlyOwner {
+    function setLiquidatorPenaltyShare(uint96 newShare) external onlyOwner {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
         uint96 oldShare = $.liquidatorPenaltyShare;
         if (oldShare == newShare) {
             revert ValueUnchanged();
+        }
+        _updateLiquityPenaltyShare($, oldShare, newShare);
+    }
+
+    /**
+     * @dev Internal function to update the liquidator penalty share in the VaultFactoryStorage.
+     * Validates the new share value against the system's constraints, updates the storage, and emits a
+     * `LiquidatorPenaltyShareChanged` event. Expected to be invoked by `setLiquidatorPenaltyShare` or similar functions
+     * with appropriate access control and validation logic in place.
+     * @param $ The reference to the VaultFactoryStorage structure.
+     * @param oldShare The current share of liquidation penalties allocated to the liquidator.
+     * @param newShare The new share of liquidation penalties to be allocated to the liquidator.
+     */
+    function _updateLiquityPenaltyShare(VaultFactoryStorage storage $, uint96 oldShare, uint96 newShare) internal {
+        if (newShare > Constants.FEE_PRECISION) {
+            revert InvalidShare(0, Constants.FEE_PRECISION, newShare);
         }
         $.liquidatorPenaltyShare = newShare;
         emit LiquidatorPenaltyShareChanged(oldShare, newShare);
@@ -349,14 +440,29 @@ abstract contract VaultFactoryConfiguration is
      *      Reverts if the new vault deployer's address is the same as the current one to prevent unnecessary updates.
      * @param newVaultDeployer The address of the new vault deployer.
      */
-    function setVaultDeployer(address newVaultDeployer) public onlyOwner {
+    function setVaultDeployer(address newVaultDeployer) external onlyOwner {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
-        if (newVaultDeployer == address(0)) {
-            revert InvalidZeroAddress();
-        }
         address oldVaultDeployer = $.vaultDeployer;
         if (oldVaultDeployer == newVaultDeployer) {
             revert ValueUnchanged();
+        }
+        _updateVaultDeployer($, oldVaultDeployer, newVaultDeployer);
+    }
+
+    /**
+     * @dev Internal function to update the vault deployer's address in the VaultFactoryStorage.
+     * Checks for a non-zero new address, updates the storage, and emits a `VaultDeployerChanged` event.
+     * This function is meant for use by higher-level functions like `setVaultDeployer`, which are responsible for
+     * authorization and ensuring the new address's validity before making the update.
+     * @param $ The reference to the VaultFactoryStorage structure.
+     * @param oldVaultDeployer The address of the current vault deployer.
+     * @param newVaultDeployer The new vault deployer's address to be updated to.
+     */
+    function _updateVaultDeployer(VaultFactoryStorage storage $, address oldVaultDeployer, address newVaultDeployer)
+        internal
+    {
+        if (newVaultDeployer == address(0)) {
+            revert InvalidZeroAddress();
         }
         $.vaultDeployer = newVaultDeployer;
         emit VaultDeployerChanged(oldVaultDeployer, newVaultDeployer);

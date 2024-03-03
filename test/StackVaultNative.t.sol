@@ -61,7 +61,9 @@ contract StackVaultNativeTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(vaultDeployer), init);
 
         VaultFactory vaultFactory = new VaultFactory(address(weth), address(borrowTokenMinter));
-        init = abi.encodeCall(vaultFactory.initialize, (address(proxy), address(borrowTokenOracle), address(1)));
+        init = abi.encodeCall(
+            vaultFactory.initialize, (address(proxy), address(borrowTokenOracle), address(1), address(2))
+        );
         proxy = new ERC1967Proxy(address(vaultFactory), init);
         factory = VaultFactory(address(proxy));
 

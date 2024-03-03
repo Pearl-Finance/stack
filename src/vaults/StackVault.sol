@@ -82,13 +82,14 @@ contract StackVault is
     event VaultRetired();
     event VaultRevived();
 
-    event CollateralTokenOracleUpdated(address indexed collateralTokenOracle);
-    event BorrowOpeningFeeUpdated(uint256 borrowOpeningFee);
-    event LiquidationPenaltyFeeUpdated(uint256 liquidationPenaltyFee);
-    event InterestRateMultiplierUpdated(uint256 interestRateMultiplier);
+    event CollateralTokenOracleUpdated(address indexed oldOracle, address indexed newOracle);
+    event BorrowOpeningFeeUpdated(uint256 oldFee, uint256 newFee);
+    event LiquidationPenaltyFeeUpdated(uint256 oldFee, uint256 newFee);
+    event LiquidationThresholdUpdated(uint8 oldThreshold, uint8 newThreshold);
+    event InterestRateMultiplierUpdated(uint256 oldMultiplier, uint256 newMultiplier);
 
     error BorrowLimitExceeded(uint256 totalAmountBorrowed, uint256 borrowLimit);
-    error InvalidLiquidationThreshold(uint8 value, uint256 minValue, uint256 maxValue);
+    error InvalidLiquidationThreshold(uint8 min, uint8 max, uint8 actual);
     error LeverageFlashloanFailed();
     error LiquidationFailed(address liquidator, address account);
     error Unhealthy();
@@ -190,16 +191,32 @@ contract StackVault is
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
         StackVaultStorage storage $ = _getStackVaultStorage();
-        if (_liquidationThreshold == 0 || _liquidationThreshold > Constants.LTV_PRECISION) {
-            revert InvalidLiquidationThreshold(_liquidationThreshold, 1, Constants.LTV_PRECISION);
-        }
-        $.liquidationThreshold = _liquidationThreshold;
-        $._factory = msg.sender;
-        setCollateralTokenOracle(_collateralTokenOracle);
-        setBorrowOpeningFee(DEFAULT_BORROW_OPENING_FEE);
-        setLiquidationPenaltyFee(DEFAULT_LIQUIDATION_PENALTY_FEE);
-        setInterestRateMultiplier(_interestRateMultiplier);
         $._factory = factory;
+        _updateLiquidationThreshold($, 0, _liquidationThreshold);
+        _updateCollateralTokenOracle($, address(0), _collateralTokenOracle);
+        _updateBorrowOpeningFee($, 0, DEFAULT_BORROW_OPENING_FEE);
+        _updateLiquidationPenaltyFee($, 0, DEFAULT_LIQUIDATION_PENALTY_FEE);
+        _updateInterestRateMultiplier($, 0, _interestRateMultiplier);
+    }
+
+    /**
+     * @dev Internal function to update the liquidation threshold in the StackVaultStorage.
+     * Validates the new threshold against system constraints, updates the storage, and emits a
+     * `LiquidationThresholdUpdated` event. This function is expected to be called by public or external setter
+     * functions that perform additional checks and access control.
+     * @param $ The reference to the StackVaultStorage structure.
+     * @param oldThreshold The previous liquidation threshold.
+     * @param newThreshold The new liquidation threshold to be set.
+     */
+    function _updateLiquidationThreshold(StackVaultStorage storage $, uint8 oldThreshold, uint8 newThreshold)
+        internal
+    {
+        uint8 minLiquidationThreshold = SafeCast.toUint8(Constants.LTV_PRECISION / 100); // 1%
+        if (newThreshold < minLiquidationThreshold || newThreshold > Constants.LTV_PRECISION) {
+            revert InvalidLiquidationThreshold(1, SafeCast.toUint8(Constants.LTV_PRECISION), newThreshold);
+        }
+        $.liquidationThreshold = newThreshold;
+        emit LiquidationThresholdUpdated(oldThreshold, newThreshold);
     }
 
     /**
@@ -214,12 +231,32 @@ contract StackVault is
     /**
      * @notice Sets the oracle address for the collateral token.
      * @dev Updates the oracle used for pricing the collateral token. Only callable by the factory.
-     * @param _collateralTokenOracle The new oracle address for the collateral token.
+     * @param newOracle The new oracle address for the collateral token.
      */
-    function setCollateralTokenOracle(address _collateralTokenOracle) public onlyFactory {
+    function setCollateralTokenOracle(address newOracle) public onlyFactory {
         StackVaultStorage storage $ = _getStackVaultStorage();
-        $.collateralTokenOracle = _collateralTokenOracle;
-        emit CollateralTokenOracleUpdated(_collateralTokenOracle);
+        address oldOracle = $.collateralTokenOracle;
+        if (oldOracle == newOracle) {
+            revert ValueUnchanged();
+        }
+        _updateCollateralTokenOracle($, oldOracle, newOracle);
+    }
+
+    /**
+     * @dev Internal function to update the collateral token oracle address in StackVaultStorage.
+     * Validates the new oracle address, updates the storage, and emits a `CollateralTokenOracleUpdated` event. This
+     * function is designed to be called by higher-level functions that include authorization checks and ensure the new
+     * address's validity.
+     * @param $ The reference to the StackVaultStorage structure.
+     * @param oldOracle The address of the previous collateral token oracle.
+     * @param newOracle The address of the new collateral token oracle.
+     */
+    function _updateCollateralTokenOracle(StackVaultStorage storage $, address oldOracle, address newOracle) internal {
+        if (newOracle == address(0)) {
+            revert InvalidZeroAddress();
+        }
+        $.collateralTokenOracle = newOracle;
+        emit CollateralTokenOracleUpdated(oldOracle, newOracle);
     }
 
     /**
@@ -229,8 +266,28 @@ contract StackVault is
      */
     function setBorrowOpeningFee(uint256 _borrowOpeningFee) public onlyFactory {
         StackVaultStorage storage $ = _getStackVaultStorage();
-        $.borrowOpeningFee = _borrowOpeningFee;
-        emit BorrowOpeningFeeUpdated(_borrowOpeningFee);
+        uint256 oldFee = $.borrowOpeningFee;
+        if (oldFee == _borrowOpeningFee) {
+            revert ValueUnchanged();
+        }
+        _updateBorrowOpeningFee($, oldFee, _borrowOpeningFee);
+    }
+
+    /**
+     * @dev Internal function to update the borrow opening fee in StackVaultStorage.
+     * Checks that the new fee is within system limits, updates the storage, and emits a `BorrowOpeningFeeUpdated`
+     * event. It is intended for use by functions like `setBorrowOpeningFee`, which manage access control and validation
+     * of the new fee.
+     * @param $ The reference to the StackVaultStorage structure.
+     * @param oldFee The previous borrow opening fee.
+     * @param newFee The new borrow opening fee to be set.
+     */
+    function _updateBorrowOpeningFee(StackVaultStorage storage $, uint256 oldFee, uint256 newFee) internal {
+        if (newFee > Constants.FEE_PRECISION) {
+            revert InvalidFee(0, Constants.FEE_PRECISION, newFee);
+        }
+        $.borrowOpeningFee = newFee;
+        emit BorrowOpeningFeeUpdated(oldFee, newFee);
     }
 
     /**
@@ -240,8 +297,28 @@ contract StackVault is
      */
     function setLiquidationPenaltyFee(uint256 _liquidationPenaltyFee) public onlyFactory {
         StackVaultStorage storage $ = _getStackVaultStorage();
-        $.liquidationPenaltyFee = _liquidationPenaltyFee;
-        emit LiquidationPenaltyFeeUpdated(_liquidationPenaltyFee);
+        uint256 oldFee = $.liquidationPenaltyFee;
+        if (oldFee == _liquidationPenaltyFee) {
+            revert ValueUnchanged();
+        }
+        _updateLiquidationPenaltyFee($, oldFee, _liquidationPenaltyFee);
+    }
+
+    /**
+     * @dev Internal function to update the liquidation penalty fee in StackVaultStorage.
+     * Validates the new fee against the system's constraints, updates the storage, and emits a
+     * `LiquidationPenaltyFeeUpdated` event. This function is expected to be invoked by external or public functions
+     * with appropriate authorization and validation checks.
+     * @param $ The reference to the StackVaultStorage structure.
+     * @param oldFee The previous liquidation penalty fee.
+     * @param newFee The new liquidation penalty fee to be updated.
+     */
+    function _updateLiquidationPenaltyFee(StackVaultStorage storage $, uint256 oldFee, uint256 newFee) internal {
+        if (newFee > Constants.FEE_PRECISION) {
+            revert InvalidFee(0, Constants.FEE_PRECISION, newFee);
+        }
+        $.liquidationPenaltyFee = newFee;
+        emit LiquidationPenaltyFeeUpdated(oldFee, newFee);
     }
 
     /**
@@ -253,8 +330,27 @@ contract StackVault is
     function setInterestRateMultiplier(uint256 _interestRateMultiplier) public onlyFactory {
         accrueInterest();
         StackVaultStorage storage $ = _getStackVaultStorage();
-        $.interestRateMultiplier = _interestRateMultiplier;
-        emit InterestRateMultiplierUpdated(_interestRateMultiplier);
+        uint256 oldMultiplier = $.interestRateMultiplier;
+        if (oldMultiplier == _interestRateMultiplier) {
+            revert ValueUnchanged();
+        }
+        _updateInterestRateMultiplier($, oldMultiplier, _interestRateMultiplier);
+    }
+
+    /**
+     * @dev Internal function to update the interest rate multiplier in StackVaultStorage.
+     * Checks the new multiplier for validity, updates the storage, and emits an `InterestRateMultiplierUpdated` event.
+     * Aimed to be used by setter functions like `setInterestRateMultiplier` that perform necessary checks and
+     * authorization.
+     * @param $ The reference to the StackVaultStorage structure.
+     * @param oldMultiplier The previous interest rate multiplier.
+     * @param newMultiplier The new interest rate multiplier to be set.
+     */
+    function _updateInterestRateMultiplier(StackVaultStorage storage $, uint256 oldMultiplier, uint256 newMultiplier)
+        internal
+    {
+        $.interestRateMultiplier = newMultiplier;
+        emit InterestRateMultiplierUpdated(oldMultiplier, newMultiplier);
     }
 
     /**

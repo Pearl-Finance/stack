@@ -50,7 +50,9 @@ contract VaultFactoryTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(vaultDeployer), init);
 
         VaultFactory impl = new VaultFactory(address(weth), address(borrowTokenMinter));
-        init = abi.encodeCall(impl.initialize, (address(vaultDeployer), address(borrowTokenOracle), address(1)));
+        init = abi.encodeCall(
+            impl.initialize, (address(vaultDeployer), address(borrowTokenOracle), address(1), address(2))
+        );
         proxy = new ERC1967Proxy(address(impl), init);
         factory = VaultFactory(address(proxy));
 
