@@ -6,8 +6,10 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 
 import {BorrowInterestRateAdjustmentMath} from "../libraries/BorrowInterestRateAdjustmentMath.sol";
 import {CommonErrors} from "../interfaces/CommonErrors.sol";
+import {IVaultFactory} from "../interfaces/IVaultFactory.sol";
 import {Constants} from "../libraries/Constants.sol";
 import {StackVault} from "../vaults/StackVault.sol";
+import {VaultFactoryBulkOperations} from "./VaultFactoryBulkOperations.sol";
 import {VaultFactoryERC7201} from "./VaultFactoryERC7201.sol";
 
 /**
@@ -20,7 +22,12 @@ import {VaultFactoryERC7201} from "./VaultFactoryERC7201.sol";
  *      Additionally, it contains the logic for accruing interest across all vaults.
  * @author SeaZarrgh LaBuoy
  */
-abstract contract VaultFactoryConfiguration is CommonErrors, OwnableUpgradeable, VaultFactoryERC7201 {
+abstract contract VaultFactoryConfiguration is
+    CommonErrors,
+    OwnableUpgradeable,
+    VaultFactoryBulkOperations,
+    VaultFactoryERC7201
+{
     using BorrowInterestRateAdjustmentMath for uint256;
     using SafeCast for uint256;
 
@@ -36,6 +43,11 @@ abstract contract VaultFactoryConfiguration is CommonErrors, OwnableUpgradeable,
     event LiquidatorPenaltyShareChanged(uint96 oldShare, uint96 newShare);
 
     constructor(address _borrowTokenMinter) VaultFactoryERC7201(_borrowTokenMinter) {}
+
+    /**
+     * @inheritdoc IVaultFactory
+     */
+    function accrueInterest() public virtual override(IVaultFactory, VaultFactoryBulkOperations);
 
     /**
      * @notice Gets the address of the oracle used for the borrow token.
@@ -210,7 +222,7 @@ abstract contract VaultFactoryConfiguration is CommonErrors, OwnableUpgradeable,
      * @param referencePrice The reference price used to adjust the borrow interest rate.
      */
     function updateBorrowInterestRate(uint256 referencePrice) external {
-        this.accrueInterest();
+        accrueInterest();
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
         if (msg.sender != $.interestRateManager) {
             revert UnauthorizedCaller();
@@ -235,7 +247,7 @@ abstract contract VaultFactoryConfiguration is CommonErrors, OwnableUpgradeable,
      * @param newInterestRate The new borrow interest rate to be set.
      */
     function overrideBorrowInterestRate(uint256 newInterestRate) public onlyOwner {
-        this.accrueInterest();
+        accrueInterest();
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
         uint256 oldInterestRate = $.borrowInterestRate;
         if (oldInterestRate == newInterestRate) {

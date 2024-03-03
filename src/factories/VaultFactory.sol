@@ -85,6 +85,13 @@ contract VaultFactory is
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
+     * @inheritdoc VaultFactoryVaultManagement
+     */
+    function accrueInterest() public virtual override(VaultFactoryConfiguration, VaultFactoryVaultManagement) {
+        VaultFactoryVaultManagement.accrueInterest();
+    }
+
+    /**
      * @notice Initializes the VaultFactory contract with necessary configuration.
      * @dev Sets up the contract with initial configuration values, including the vault deployer, borrow token oracle,
      *      and fee receiver.

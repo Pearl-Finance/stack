@@ -8,11 +8,13 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {CommonErrors} from "../interfaces/CommonErrors.sol";
+import {IVaultFactory} from "../interfaces/IVaultFactory.sol";
 import {BorrowInterestRateAdjustmentMath} from "../libraries/BorrowInterestRateAdjustmentMath.sol";
 import {Constants} from "../libraries/Constants.sol";
 
 import {BorrowToken} from "../tokens/BorrowToken.sol";
 import {StackVault} from "../vaults/StackVault.sol";
+import {VaultFactoryBulkOperations} from "./VaultFactoryBulkOperations.sol";
 import {VaultFactoryERC7201} from "./VaultFactoryERC7201.sol";
 
 /**
@@ -25,7 +27,12 @@ import {VaultFactoryERC7201} from "./VaultFactoryERC7201.sol";
  *      It also includes utility functions to view all vaults and their specific details.
  * @author SeaZarrgh LaBuoy
  */
-abstract contract VaultFactoryVaultManagement is CommonErrors, OwnableUpgradeable, VaultFactoryERC7201 {
+abstract contract VaultFactoryVaultManagement is
+    CommonErrors,
+    OwnableUpgradeable,
+    VaultFactoryBulkOperations,
+    VaultFactoryERC7201
+{
     using BorrowInterestRateAdjustmentMath for uint256;
     using SafeERC20 for BorrowToken;
     using Math for uint256;
@@ -41,7 +48,7 @@ abstract contract VaultFactoryVaultManagement is CommonErrors, OwnableUpgradeabl
      *      This function ensures that interest is updated and accrued consistently across all vaults.
      *      Can be called by any actor in the system, allowing for flexible interest accrual triggers.
      */
-    function accrueInterest() public {
+    function accrueInterest() public virtual override(IVaultFactory, VaultFactoryBulkOperations) {
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
         for (uint256 i = $.allVaultsLength; i != 0;) {
             unchecked {
