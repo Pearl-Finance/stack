@@ -327,21 +327,20 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
             receiverPos[receiver] = 0;
         }
 
-        for (uint256 i = numReceivers; i != 0;) {
-            unchecked {
-                --i;
-            }
+        for (uint256 i; i < numReceivers;) {
             address receiver = receivers[i];
             uint96 split = splits[i];
             _validateSplitValue(split, splitTotal);
             splitTotal += split;
             if (i < currentLength) {
                 feeReceivers[i] = FeeReceiver(receiver, split);
-                receiverPos[receiver] = i + 1;
             } else {
                 feeReceivers.push(FeeReceiver(receiver, split));
-                receiverPos[receiver] = feeReceivers.length;
             }
+            unchecked {
+                ++i;
+            }
+            receiverPos[receiver] = i;
         }
 
         $.splitTotal = splitTotal;
