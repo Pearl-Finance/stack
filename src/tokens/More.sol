@@ -59,7 +59,7 @@ contract More is BorrowToken, OFTUpgradeable, ReentrancyGuardUpgradeable, UUPSUp
         __OFT_init(msg.sender, "MORE", "MORE");
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
-        setMinter(_minter);
+        minter = _minter;
     }
 
     /**
@@ -67,7 +67,7 @@ contract More is BorrowToken, OFTUpgradeable, ReentrancyGuardUpgradeable, UUPSUp
      * @dev Updates the minter address. Only the contract owner can perform this operation.
      * @param _minter The new address authorized to mint new tokens.
      */
-    function setMinter(address _minter) public onlyOwner {
+    function setMinter(address _minter) external onlyOwner {
         minter = _minter;
     }
 
