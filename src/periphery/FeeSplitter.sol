@@ -335,9 +335,9 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
             _validateSplitValue(split, splitTotal);
             splitTotal += split;
             if (i < currentLength) {
-                feeReceivers[i] = FeeReceiver(receiver, split);
+                feeReceivers[i] = FeeReceiver({receiver: receiver, split: split});
             } else {
-                feeReceivers.push(FeeReceiver(receiver, split));
+                feeReceivers.push(FeeReceiver({receiver: receiver, split: split}));
             }
             unchecked {
                 ++i;
