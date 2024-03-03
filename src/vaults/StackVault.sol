@@ -699,8 +699,6 @@ contract StackVault is
             emit Borrowed(initiator, initiator, swapAmountIn, share);
         }
 
-        _healthcheck(initiator);
-
         // repay flashloan
         borrowToken.safeIncreaseAllowance(address(borrowToken), amount + fee);
 
