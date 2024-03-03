@@ -71,6 +71,7 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
      */
     function initialize(address swapRouter, address quoter) external initializer {
         __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
         if (swapRouter == address(0) || quoter == address(0)) {
             revert InvalidZeroAddress();
         }

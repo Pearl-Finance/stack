@@ -52,6 +52,7 @@ contract VaultDeployer is CommonErrors, OwnableUpgradeable, UUPSUpgradeable {
      */
     function initialize() external initializer {
         __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
     }
 
     /**

@@ -71,6 +71,7 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
      */
     function initialize(address _team, address _vaultFactory, address _amo) external initializer {
         __Ownable_init(_team);
+        __UUPSUpgradeable_init();
 
         MoreMinterStorage storage $ = _getMoreMinterStorage();
         $.team = _team;

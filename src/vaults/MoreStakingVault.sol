@@ -32,6 +32,7 @@ contract MoreStakingVault is ERC4626Upgradeable, OwnableUpgradeable, UUPSUpgrade
         __Ownable_init(msg.sender);
         __ERC20_init(name, symbol);
         __ERC4626_init(IERC20(more));
+        __UUPSUpgradeable_init();
     }
 
     /**

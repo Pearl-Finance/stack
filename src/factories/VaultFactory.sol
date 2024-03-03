@@ -100,6 +100,8 @@ contract VaultFactory is
         initializer
     {
         __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
+        __Multicall_init();
         if (_feeReceiver == address(0)) {
             revert InvalidZeroAddress();
         }

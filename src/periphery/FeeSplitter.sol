@@ -97,6 +97,7 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
 
     function initialize() external initializer {
         __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
     }
 
     /**

@@ -58,6 +58,7 @@ contract More is BorrowToken, OFTUpgradeable, ReentrancyGuardUpgradeable, UUPSUp
     function initialize(address _minter) external initializer {
         __OFT_init(msg.sender, "MORE", "MORE");
         __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
         setMinter(_minter);
     }
 

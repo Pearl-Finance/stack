@@ -188,6 +188,7 @@ contract StackVault is
         __Multicall_init();
         __Ownable_init(OwnableUpgradeable(factory).owner());
         __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
         StackVaultStorage storage $ = _getStackVaultStorage();
         if (_liquidationThreshold == 0 || _liquidationThreshold > Constants.LTV_PRECISION) {
             revert InvalidLiquidationThreshold(_liquidationThreshold, 1, Constants.LTV_PRECISION);
