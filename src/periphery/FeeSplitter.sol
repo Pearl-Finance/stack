@@ -189,7 +189,9 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         }
         _distribute($, false);
         _validateSplitValue(split, $.splitTotal);
-        $.splitTotal += split;
+        unchecked {
+            $.splitTotal += split;
+        }
         $.feeReceivers.push(FeeReceiver(receiver, split));
         $.receiverPos[receiver] = $.feeReceivers.length;
     }
@@ -226,7 +228,9 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         }
         $.receiverPos[receiver] = 0;
         (, uint96 split) = _unsafeFeeReceiverAccess($.feeReceivers, index);
-        $.splitTotal -= split;
+        unchecked {
+            $.splitTotal -= split;
+        }
         uint256 receiversLength = $.feeReceivers.length;
         uint256 lastIndex = receiversLength - 1;
         if (index != lastIndex) {
@@ -333,7 +337,9 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
             address receiver = receivers[i];
             uint96 split = splits[i];
             _validateSplitValue(split, splitTotal);
-            splitTotal += split;
+            unchecked {
+                splitTotal += split;
+            }
             if (i < currentLength) {
                 feeReceivers[i] = FeeReceiver({receiver: receiver, split: split});
             } else {
