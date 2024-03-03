@@ -141,7 +141,7 @@ abstract contract VaultFactoryVaultManagement is CommonErrors, OwnableUpgradeabl
                 delta = newBorrowLimit - currentBorrowLimit;
             }
             BorrowToken(borrowToken).safeTransferFrom(msg.sender, address(this), delta);
-            BorrowToken(borrowToken).safeIncreaseAllowance(vault, delta);
+            BorrowToken(borrowToken).forceApprove(vault, delta);
             StackVault(vault).increaseBorrowLimit(delta);
         } else if (currentBorrowLimit > newBorrowLimit) {
             uint256 delta;

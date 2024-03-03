@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.20;
 
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -24,6 +25,7 @@ import {IRouter} from "./interfaces/IRouter.sol";
  * @author SeaZarrgh LaBuoy
  */
 contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
+    using Address for address;
     using SafeERC20 for IERC20;
 
     event SwapRouterUpdated(address indexed oldSwapRouter, address indexed newSwapRouter);
@@ -154,10 +156,6 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         external
         returns (uint256)
     {
-        PearlRouterStorage storage $ = _getPearlRouterStorage();
-        address router = $.swapRouter;
-        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
-        IERC20(tokenIn).safeIncreaseAllowance(router, amountIn);
         IRouter.ExactInputSingleParams memory params = IRouter.ExactInputSingleParams({
             tokenIn: tokenIn,
             tokenOut: tokenOut,
@@ -169,7 +167,7 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
             sqrtPriceLimitX96: 0
         });
 
-        return IRouter(router).exactInputSingle(params);
+        return _processTokenSwap(IERC20(tokenIn), amountIn, abi.encodeCall(IRouter.exactInputSingle, (params)));
     }
 
     /**
@@ -183,11 +181,7 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
      * @return The amount of the output token received.
      */
     function swap(bytes memory path, uint256 amountIn, uint256 minAmountOut) external returns (uint256) {
-        PearlRouterStorage storage $ = _getPearlRouterStorage();
-        address router = $.swapRouter;
         address tokenIn = _firstAddressInPath(path);
-        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
-        IERC20(tokenIn).safeIncreaseAllowance(router, amountIn);
         IRouter.ExactInputParams memory params = IRouter.ExactInputParams({
             path: path,
             recipient: msg.sender,
@@ -196,7 +190,7 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
             amountOutMinimum: minAmountOut
         });
 
-        return IRouter(router).exactInput(params);
+        return _processTokenSwap(IERC20(tokenIn), amountIn, abi.encodeCall(IRouter.exactInput, (params)));
     }
 
     /**
@@ -287,5 +281,31 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         assembly {
             firstAddress := div(mload(add(path, 0x20)), 0x1000000000000000000000000)
         }
+    }
+
+    /**
+     * @notice Pulls the specified `amount` of `token` to this contract, approves the swap router to spend it, and
+     * executes a swap.
+     *
+     * @dev This internal function handles the transfer of tokens into the contract, sets the allowance for the swap
+     * router, and performs the token swap by calling the router with the provided `swapData`. It ensures the allowance
+     * is reset after the swap. This function abstracts the token transfer, approval, and swap execution steps to
+     * simplify swap operations.
+     *
+     * @param token The ERC20 token to be swapped.
+     * @param amount The amount of the token to be swapped.
+     * @param swapData The encoded data for the swap function call, including the swap parameters.
+     * @return result The amount of output tokens received from the swap.
+     */
+    function _processTokenSwap(IERC20 token, uint256 amount, bytes memory swapData)
+        internal
+        returns (uint256 result)
+    {
+        PearlRouterStorage storage $ = _getPearlRouterStorage();
+        address router = $.swapRouter;
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        token.forceApprove(router, amount);
+        result = abi.decode(router.functionCall(swapData), (uint256));
+        token.forceApprove(router, 0);
     }
 }
