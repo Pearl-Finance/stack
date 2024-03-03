@@ -90,11 +90,9 @@ contract StaticPriceOracle is IOracle {
      * @return price The static price of the token.
      */
     function latestPrice(uint256 maxAge) external view returns (uint256 price) {
+        maxAge; // silence unused variable warning
         uint256 age;
         (price, age) = _priceInfo();
-        if (maxAge < age) {
-            revert StalePrice(price, maxAge, age);
-        }
     }
 
     /**
