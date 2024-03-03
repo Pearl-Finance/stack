@@ -230,8 +230,8 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         uint256 receiversLength = $.feeReceivers.length;
         uint256 lastIndex = receiversLength - 1;
         if (index != lastIndex) {
-            (receiver,) = _unsafeFeeReceiverAccess($.feeReceivers, lastIndex);
-            $.feeReceivers[index] = $.feeReceivers[lastIndex];
+            (receiver, split) = _unsafeFeeReceiverAccess($.feeReceivers, lastIndex);
+            $.feeReceivers[index] = FeeReceiver({receiver: receiver, split: split});
             $.receiverPos[receiver] = pos;
         }
         $.feeReceivers.pop();
