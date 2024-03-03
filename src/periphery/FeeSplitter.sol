@@ -2,7 +2,6 @@
 pragma solidity =0.8.20;
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -36,7 +35,6 @@ import {CommonErrors} from "../interfaces/CommonErrors.sol";
  * required.
  */
 contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
-    using Math for uint256;
     using SafeERC20 for IERC20;
 
     uint256 private constant CHECKPOINT_INTERVAL = 1 days;
@@ -153,7 +151,7 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
                     --i;
                 }
                 (address feeReceiver, uint96 split) = _unsafeFeeReceiverAccess(feeReceivers, i);
-                uint256 splitAmount = amount.mulDiv(split, splitTotal, Math.Rounding.Floor);
+                uint256 splitAmount = amount * split / splitTotal;
                 if (splitAmount != 0) {
                     totalDistributed += splitAmount;
                     IERC20(token).safeTransfer(feeReceiver, splitAmount);
