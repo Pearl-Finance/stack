@@ -279,7 +279,7 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     function _firstAddressInPath(bytes memory path) internal pure returns (address firstAddress) {
         require(path.length >= 20, "OB");
         assembly {
-            firstAddress := div(mload(add(path, 0x20)), 0x1000000000000000000000000)
+            firstAddress := shr(96, mload(add(path, 0x20)))
         }
     }
 
@@ -297,10 +297,7 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
      * @param swapData The encoded data for the swap function call, including the swap parameters.
      * @return result The amount of output tokens received from the swap.
      */
-    function _processTokenSwap(IERC20 token, uint256 amount, bytes memory swapData)
-        internal
-        returns (uint256 result)
-    {
+    function _processTokenSwap(IERC20 token, uint256 amount, bytes memory swapData) internal returns (uint256 result) {
         PearlRouterStorage storage $ = _getPearlRouterStorage();
         address router = $.swapRouter;
         token.safeTransferFrom(msg.sender, address(this), amount);
