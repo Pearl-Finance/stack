@@ -182,7 +182,7 @@ contract VaultFactory is
         _requireVault(vault);
         VaultFactoryStorage storage $ = _getVaultFactoryStorage();
         OwnableUpgradeable(vault).transferOwnership($.vaultDeployer);
-        VaultDeployer($.vaultDeployer).upgradeVault(vault, owner());
+        VaultDeployer($.vaultDeployer).upgradeVault(vault, msg.sender);
     }
 
     /**
