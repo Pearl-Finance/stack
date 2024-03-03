@@ -98,7 +98,6 @@ contract StackVault is
     /// @custom:storage-location erc7201:pearl.storage.StackVault
     struct StackVaultStorage {
         bool isRetired;
-        address _factory;
         address collateralTokenOracle;
         uint256 borrowLimit;
         uint256 liquidationThreshold;
@@ -125,6 +124,7 @@ contract StackVault is
     }
 
     bool private immutable _isNativeCollateralToken;
+    IVaultFactory private immutable _factory;
     IWETH9 private immutable _WETH;
     BorrowToken public immutable borrowToken;
     IERC20 public immutable collateralToken;
@@ -141,7 +141,7 @@ contract StackVault is
 
     modifier onlyFactory() {
         StackVaultStorage storage $ = _getStackVaultStorage();
-        if (msg.sender != $._factory) {
+        if (msg.sender != address(_factory)) {
             revert UnauthorizedCaller();
         }
         _;
@@ -164,6 +164,7 @@ contract StackVault is
         _disableInitializers();
         address weth = IVaultFactory(factory).WETH();
         _isNativeCollateralToken = _collateralToken == Constants.ETH_ADDRESS || _collateralToken == weth;
+        _factory = IVaultFactory(factory);
         _WETH = IWETH9(weth);
         borrowToken = BorrowToken(_borrowToken);
         collateralToken = IERC20(_isNativeCollateralToken ? weth : _collateralToken);
@@ -175,23 +176,22 @@ contract StackVault is
      *      multiplier.
      *      Initializes multicall and reentrancy guard functionalities.
      *      Can only be called once due to the `initializer` modifier.
-     * @param factory The address of the vault factory.
+     * @param _owner The address of the initial owner of the vault.
      * @param _collateralTokenOracle The address of the oracle for the collateral token.
      * @param _liquidationThreshold The liquidation threshold value.
      * @param _interestRateMultiplier The interest rate multiplier.
      */
     function initialize(
-        address factory,
+        address _owner,
         address _collateralTokenOracle,
         uint8 _liquidationThreshold,
         uint256 _interestRateMultiplier
     ) external initializer {
         __Multicall_init();
-        __Ownable_init(OwnableUpgradeable(factory).owner());
+        __Ownable_init(_owner);
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
         StackVaultStorage storage $ = _getStackVaultStorage();
-        $._factory = factory;
         _updateLiquidationThreshold($, 0, _liquidationThreshold);
         _updateCollateralTokenOracle($, address(0), _collateralTokenOracle);
         _updateBorrowOpeningFee($, 0, DEFAULT_BORROW_OPENING_FEE);
@@ -380,7 +380,7 @@ contract StackVault is
      */
     function interestRatePerSecond() public view returns (uint256 rate) {
         StackVaultStorage storage $ = _getStackVaultStorage();
-        rate = IVaultFactory($._factory).borrowInterestRate() * $.interestRateMultiplier / 365 days;
+        rate = _factory.borrowInterestRate() * $.interestRateMultiplier / 365 days;
     }
 
     /**
@@ -461,7 +461,7 @@ contract StackVault is
                 }
             }
 
-            IVaultFactory($._factory).notifyAccruedInterest(accruedAmount);
+            _factory.notifyAccruedInterest(accruedAmount);
 
             if (burnAmount != 0) {
                 borrowToken.burn(burnAmount);
@@ -741,8 +741,7 @@ contract StackVault is
 
         borrowToken.safeTransferFrom(msg.sender, address(this), repayAmount);
 
-        address factory = $._factory;
-        address _borrowTokenOracle = IVaultFactory(factory).borrowTokenOracle();
+        address _borrowTokenOracle = _factory.borrowTokenOracle();
         address _collateralTokenOracle = $.collateralTokenOracle;
 
         uint256 repaidCollateralAmount =
@@ -770,8 +769,8 @@ contract StackVault is
 
         _transferCollateralOut(to, totalCollateralRemoved - collectedFee);
 
-        collateralToken.safeIncreaseAllowance(factory, collectedFee);
-        IVaultFactory(factory).collectFees(address(collateralToken), collectedFee);
+        collateralToken.safeIncreaseAllowance(address(_factory), collectedFee);
+        _factory.collectFees(address(collateralToken), collectedFee);
 
         emit Liquidated(msg.sender, account, totalCollateralRemoved, penaltyFeeAmount, repayAmount);
     }
@@ -901,7 +900,7 @@ contract StackVault is
         }
 
         if (borrowShare != 0) {
-            address oracle = IVaultFactory($._factory).borrowTokenOracle();
+            address oracle = _factory.borrowTokenOracle();
             borrowAmount = $.totalBorrowAmount.toTotalAmount(borrowShare, Math.Rounding.Ceil);
             borrowValue = IOracle(oracle).valueOf(borrowAmount, Math.Rounding.Floor);
         }
@@ -964,7 +963,7 @@ contract StackVault is
         $.userBorrowAmount[account] += amount;
         $.accrualInfo.feesEarned += feeAmount;
 
-        IVaultFactory($._factory).notifyAccruedInterest(feeAmount);
+        _factory.notifyAccruedInterest(feeAmount);
     }
 
     /**
@@ -1194,7 +1193,7 @@ contract StackVault is
      */
     function _checkSwapTarget(address swapTarget) internal view {
         StackVaultStorage storage $ = _getStackVaultStorage();
-        if (!IVaultFactory($._factory).isTrustedSwapTarget(swapTarget)) {
+        if (!_factory.isTrustedSwapTarget(swapTarget)) {
             revert UntrustedSwapTarget(swapTarget);
         }
     }

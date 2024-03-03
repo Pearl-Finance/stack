@@ -24,7 +24,7 @@ import {PearlRouteFinder} from "../../src/periphery/PearlRouteFinder.sol";
 import {ERC4626Router} from "../../src/periphery/ERC4626Router.sol";
 
 abstract contract DeployAllBase is PearlDeploymentScript {
-    string private constant VAULT_FACTORY_KEY = "VaultFactory-v4";
+    string private constant VAULT_FACTORY_KEY = "VaultFactory-v5";
 
     function run() public {
         _setup();

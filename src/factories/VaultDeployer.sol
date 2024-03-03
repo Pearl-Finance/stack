@@ -88,7 +88,7 @@ contract VaultDeployer is CommonErrors, OwnableUpgradeable, UUPSUpgradeable {
         }
         bytes memory init = abi.encodeWithSelector(
             StackVault.initialize.selector,
-            msg.sender,
+            OwnableUpgradeable(factory).owner(),
             collateralTokenOracle,
             liquidationThreshold,
             interestRateMultiplier
