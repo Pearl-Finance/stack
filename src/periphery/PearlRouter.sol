@@ -26,6 +26,9 @@ import {IRouter} from "./interfaces/IRouter.sol";
 contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     using SafeERC20 for IERC20;
 
+    event SwapRouterUpdated(address indexed oldSwapRouter, address indexed newSwapRouter);
+    event QuoterUpdated(address indexed oldQuoter, address indexed newQuoter);
+
     /// @custom:storage-location erc7201:pearl.storage.PearlRouter
     struct PearlRouterStorage {
         address swapRouter;
@@ -105,7 +108,16 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
      * @param swapRouter The new address for the swap router.
      */
     function setSwapRouter(address swapRouter) external onlyOwner {
-        _getPearlRouterStorage().swapRouter = swapRouter;
+        PearlRouterStorage storage $ = _getPearlRouterStorage();
+        if (swapRouter == address(0)) {
+            revert InvalidZeroAddress();
+        }
+        address currentSwapRouter = $.swapRouter;
+        if (swapRouter == currentSwapRouter) {
+            revert ValueUnchanged();
+        }
+        $.swapRouter = swapRouter;
+        emit SwapRouterUpdated(currentSwapRouter, swapRouter);
     }
 
     /**
@@ -115,7 +127,16 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
      * @param quoter The new address for the quoter.
      */
     function setQuoter(address quoter) external onlyOwner {
-        _getPearlRouterStorage().quoter = quoter;
+        PearlRouterStorage storage $ = _getPearlRouterStorage();
+        if (quoter == address(0)) {
+            revert InvalidZeroAddress();
+        }
+        address currentQuoter = $.quoter;
+        if (quoter == currentQuoter) {
+            revert ValueUnchanged();
+        }
+        $.quoter = quoter;
+        emit QuoterUpdated(currentQuoter, quoter);
     }
 
     /**

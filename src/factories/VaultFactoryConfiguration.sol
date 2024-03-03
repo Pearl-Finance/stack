@@ -28,7 +28,9 @@ abstract contract VaultFactoryConfiguration is CommonErrors, OwnableUpgradeable,
     event BorrowInterestRateChanged(uint256 oldInterestRate, uint256 newInterestRate);
     event DebtCollectorChanged(address indexed oldDebtCollector, address indexed newDebtCollector);
     event FeeReceiverChanged(address indexed oldFeeReceiver, address indexed newFeeReceiver);
+    event InterestRateManagerChanged(address indexed oldManager, address indexed newManager);
     event PenaltyReceiverChanged(address indexed oldPenaltyReceiver, address indexed newPenaltyReceiver);
+    event SwapTargetTrustChanged(address indexed target, bool oldTrust, bool newTrust);
     event VaultDeployerChanged(address indexed oldVaultDeployer, address indexed newVaultDeployer);
     event LiquidationPenaltyFeeChanged(uint256 oldFee, uint256 newFee);
     event LiquidatorPenaltyShareChanged(uint96 oldShare, uint96 newShare);
@@ -175,6 +177,7 @@ abstract contract VaultFactoryConfiguration is CommonErrors, OwnableUpgradeable,
             revert ValueUnchanged();
         }
         $.interestRateManager = newManager;
+        emit InterestRateManagerChanged(oldManager, newManager);
     }
 
     /**
@@ -193,6 +196,7 @@ abstract contract VaultFactoryConfiguration is CommonErrors, OwnableUpgradeable,
             revert ValueUnchanged();
         }
         $.trustedSwapTargets[target] = trusted;
+        emit SwapTargetTrustChanged(target, wasTrusted, trusted);
     }
 
     /**
