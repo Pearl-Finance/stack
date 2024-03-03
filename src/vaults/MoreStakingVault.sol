@@ -18,6 +18,14 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  */
 contract MoreStakingVault is ERC4626Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
     /**
+     * @notice Initializes the MoreMStakingVault contract.
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
      * @notice Initializes the More Staking Vault with the MORE token and custom names.
      * @dev Sets up the staking vault with a specified MORE token address and custom token names.
      *      Initializes the contract as an ERC4626 tokenized vault.
