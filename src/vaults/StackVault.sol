@@ -147,6 +147,13 @@ contract StackVault is
         _;
     }
 
+    modifier readOnlyNonReentrant() {
+        if (_reentrancyGuardEntered()) {
+            revert ReentrancyGuardReentrantCall();
+        }
+        _;
+    }
+
     receive() external payable {
         require(msg.sender == address(_WETH), "StackVault: cannot receive ETH");
     }
@@ -798,7 +805,7 @@ contract StackVault is
      * @dev Returns the maximum amount of tokens that can be borrowed from the vault.
      * @return _borrowLimit The current borrow limit in tokens.
      */
-    function borrowLimit() external view returns (uint256 _borrowLimit) {
+    function borrowLimit() external view readOnlyNonReentrant returns (uint256 _borrowLimit) {
         _borrowLimit = _getStackVaultStorage().borrowLimit;
     }
 
@@ -835,7 +842,7 @@ contract StackVault is
      *      Note: Since this is a view function, the returned value could be stale.
      * @return _totalBorrowAmount The total amount of borrowed tokens.
      */
-    function totalBorrowAmount() external view returns (uint256 _totalBorrowAmount) {
+    function totalBorrowAmount() external view readOnlyNonReentrant returns (uint256 _totalBorrowAmount) {
         // NOTE: Since we can't call `accrueInterest()` in a view function, the return value of this function must be
         // considered stale. Clients should use a static multicall, `accrueInterest()` followed by
         // `totalBorrowAmount()`.
@@ -848,7 +855,7 @@ contract StackVault is
      *      Note: Since this is a view function, the returned value could be stale.
      * @return _totalCollateralAmount The total amount of collateral in the vault.
      */
-    function totalCollateralAmount() external view returns (uint256 _totalCollateralAmount) {
+    function totalCollateralAmount() external view readOnlyNonReentrant returns (uint256 _totalCollateralAmount) {
         // NOTE: Since we can't call `accrueInterest()` in a view function, the return value of this function must be
         // considered stale. Clients should use a static multicall, `accrueInterest()` followed by
         // `totalCollateralAmount()`.
@@ -861,7 +868,7 @@ contract StackVault is
      * @param account The address of the user.
      * @return share The user's borrow share.
      */
-    function userBorrowShare(address account) external view returns (uint256 share) {
+    function userBorrowShare(address account) external view readOnlyNonReentrant returns (uint256 share) {
         share = _getStackVaultStorage().userBorrowShare[account];
     }
 
@@ -871,7 +878,7 @@ contract StackVault is
      * @param account The address of the user.
      * @return share The user's collateral share.
      */
-    function userCollateralShare(address account) external view returns (uint256 share) {
+    function userCollateralShare(address account) external view readOnlyNonReentrant returns (uint256 share) {
         share = _getStackVaultStorage().userCollateralShare[account];
     }
 
@@ -887,6 +894,7 @@ contract StackVault is
     function userPositionInfo(address account)
         public
         view
+        readOnlyNonReentrant
         returns (uint256 collateralAmount, uint256 collateralValue, uint256 borrowAmount, uint256 borrowValue)
     {
         StackVaultStorage storage $ = _getStackVaultStorage();
@@ -1192,7 +1200,6 @@ contract StackVault is
      * @param swapTarget The address of the swap target to validate.
      */
     function _checkSwapTarget(address swapTarget) internal view {
-        StackVaultStorage storage $ = _getStackVaultStorage();
         if (!_factory.isTrustedSwapTarget(swapTarget)) {
             revert UntrustedSwapTarget(swapTarget);
         }
