@@ -774,10 +774,10 @@ contract StackVault is
         uint256 liquidationBonus = penaltyFeeAmount / 2;
         uint256 collectedFee = penaltyFeeAmount - liquidationBonus;
 
-        _transferCollateralOut(to, totalCollateralRemoved - collectedFee);
-
         collateralToken.safeIncreaseAllowance(address(_factory), collectedFee);
         _factory.collectFees(address(collateralToken), collectedFee);
+
+        _transferCollateralOut(to, totalCollateralRemoved - collectedFee);
 
         emit Liquidated(msg.sender, account, totalCollateralRemoved, penaltyFeeAmount, repayAmount);
     }
