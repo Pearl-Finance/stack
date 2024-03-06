@@ -193,7 +193,7 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         unchecked {
             $.splitTotal += split;
         }
-        $.feeReceivers.push(FeeReceiver(receiver, split));
+        $.feeReceivers.push(FeeReceiver({receiver: receiver, split: split}));
         $.receiverPos[receiver] = $.feeReceivers.length;
     }
 
@@ -492,7 +492,7 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         uint256 currentIndex = $.lastCheckpointIndex;
         uint256 nextIndex = (currentIndex + 1) % CHECKPOINT_HISTORY_LENGTH;
         if (block.timestamp >= $.checkpoints[currentIndex].timestamp + CHECKPOINT_INTERVAL) {
-            $.checkpoints[nextIndex] = Checkpoint(block.timestamp, totalDistributed);
+            $.checkpoints[nextIndex] = Checkpoint({timestamp: block.timestamp, totalDistributed: totalDistributed});
             $.lastCheckpointIndex = nextIndex;
         }
         $.totalDistributed = totalDistributed;
