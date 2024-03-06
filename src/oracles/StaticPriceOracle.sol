@@ -86,11 +86,9 @@ contract StaticPriceOracle is IOracle {
     /**
      * @notice Retrieves the latest static price of the token, validating against a maximum age.
      * @dev Returns the constant price set for the token and ensures it is not older than `maxAge`.
-     * @param maxAge The maximum age in seconds for the price to be considered valid.
      * @return price The static price of the token.
      */
-    function latestPrice(uint256 maxAge) external view returns (uint256 price) {
-        maxAge; // silence unused variable warning
+    function latestPrice(uint256) external view returns (uint256 price) {
         uint256 age;
         (price, age) = _priceInfo();
     }
