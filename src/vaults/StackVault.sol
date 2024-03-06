@@ -738,7 +738,7 @@ contract StackVault is
             (collateralAmount, collateralValue, borrowAmount, borrowValue) = userPositionInfo(account);
 
             if (repayAmount > borrowAmount) {
-                revert LiquidationFailed(msg.sender, account);
+                repayAmount = borrowAmount;
             }
 
             if (_isHealthy(collateralValue, borrowValue)) {
