@@ -45,6 +45,6 @@ contract PearlRouteFinderTest is Test {
         deal(more, address(this), 0.1e18);
 
         IERC20(more).approve(address(router), 0.1e18);
-        router.swap(path, 0.1e18, 0);
+        router.swap(path, 0.1e18, 0, false);
     }
 }
