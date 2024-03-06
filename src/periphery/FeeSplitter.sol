@@ -181,6 +181,9 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
      * @param split The percentage of the total distribution that this receiver should receive.
      */
     function addReceiver(address receiver, uint96 split) external onlyOwner {
+        if (receiver == address(0)) {
+            revert InvalidZeroAddress();
+        }
         FeeSplitterStorage storage $ = _getFeeSplitterStorage();
         if ($.receiverPos[receiver] != 0) {
             revert ReceiverAlreadyAdded(receiver);
@@ -333,6 +336,9 @@ contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
 
         while (i < numReceivers) {
             address receiver = receivers[i];
+            if (receiver == address(0)) {
+                revert InvalidZeroAddress();
+            }
             uint96 split = splits[i];
             _validateSplitValue(split, splitTotal);
             unchecked {
