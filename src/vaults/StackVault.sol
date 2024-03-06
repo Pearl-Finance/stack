@@ -707,7 +707,7 @@ contract StackVault is
         }
 
         // repay flashloan
-        borrowToken.safeIncreaseAllowance(address(borrowToken), amount + fee);
+        borrowToken.forceApprove(address(borrowToken), amount + fee);
 
         return keccak256("ERC3156FlashBorrower.onFlashLoan");
     }
@@ -774,7 +774,7 @@ contract StackVault is
         uint256 liquidationBonus = penaltyFeeAmount / 2;
         uint256 collectedFee = penaltyFeeAmount - liquidationBonus;
 
-        collateralToken.safeIncreaseAllowance(address(_factory), collectedFee);
+        collateralToken.forceApprove(address(_factory), collectedFee);
         _factory.collectFees(address(collateralToken), collectedFee);
 
         _transferCollateralOut(to, totalCollateralRemoved - collectedFee);
@@ -1149,7 +1149,7 @@ contract StackVault is
         uint256 fromTokenBalanceBefore = fromToken.balanceOf(address(this));
         uint256 toTokenBalanceBefore = toToken.balanceOf(address(this));
 
-        fromToken.safeIncreaseAllowance(swapTarget, amount);
+        fromToken.forceApprove(swapTarget, amount);
 
         bytes memory swapResult = swapTarget.functionCall(swapData);
         emit Swap(msg.sender, swapTarget, swapData, swapResult);

@@ -69,7 +69,7 @@ contract ERC4626Router {
         }
         IERC20 asset = IERC20(vault.asset());
         asset.safeTransferFrom(msg.sender, address(this), amountIn);
-        asset.safeIncreaseAllowance(address(vault), amountIn);
+        asset.forceApprove(address(vault), amountIn);
         uint256 amount = vault.mint(shares, to);
         if (amount < amountIn) {
             asset.forceApprove(address(vault), 0);
@@ -115,7 +115,7 @@ contract ERC4626Router {
         }
         IERC20 asset = IERC20(vault.asset());
         asset.safeTransferFrom(msg.sender, address(this), amount);
-        asset.safeIncreaseAllowance(address(vault), amount);
+        asset.forceApprove(address(vault), amount);
         uint256 shares = vault.deposit(amount, to);
         if (shares < minSharesOut) {
             revert ERC4626RouterInsufficientShares();
