@@ -74,9 +74,9 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
         __UUPSUpgradeable_init();
 
         MoreMinterStorage storage $ = _getMoreMinterStorage();
-        $.team = _team;
-        $.vaultFactory = _vaultFactory;
-        $.amo = _amo;
+        _setTeam($, _team);
+        _setVaultFactory($, _vaultFactory);
+        _setAMO($, _amo);
     }
 
     /**
@@ -87,6 +87,23 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
      */
     function setTeam(address _team) external onlyOwner {
         MoreMinterStorage storage $ = _getMoreMinterStorage();
+        if (_team == $.team) {
+            revert ValueUnchanged();
+        }
+        _setTeam($, _team);
+    }
+
+    /**
+     * @dev Internally sets a new address for the team. This function updates the team address stored in the
+     * MoreMinterStorage.
+     * It requires that the new team address is not the zero address, to ensure it points to a valid address.
+     * @param $ The MoreMinterStorage instance to update.
+     * @param _team The new address to be set for the team. It must be a valid address, not the zero address.
+     */
+    function _setTeam(MoreMinterStorage storage $, address _team) internal {
+        if (_team == address(0)) {
+            revert InvalidZeroAddress();
+        }
         $.team = _team;
     }
 
@@ -98,6 +115,25 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
      */
     function setVaultFactory(address _vaultFactory) external onlyOwner {
         MoreMinterStorage storage $ = _getMoreMinterStorage();
+        if (_vaultFactory == $.vaultFactory) {
+            revert ValueUnchanged();
+        }
+        _setVaultFactory($, _vaultFactory);
+    }
+
+    /**
+     * @dev Internally sets a new address for the vault factory. This function updates the vault factory address stored
+     * in the MoreMinterStorage.
+     * It validates that the new address is not the zero address, maintaining the integrity of the vault factory
+     * address.
+     * @param $ The MoreMinterStorage instance to update.
+     * @param _vaultFactory The new address to be set for the vault factory. The address must be valid and not the zero
+     * address.
+     */
+    function _setVaultFactory(MoreMinterStorage storage $, address _vaultFactory) internal {
+        if (_vaultFactory == address(0)) {
+            revert InvalidZeroAddress();
+        }
         $.vaultFactory = _vaultFactory;
     }
 
@@ -111,6 +147,23 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
         MoreMinterStorage storage $ = _getMoreMinterStorage();
         if (msg.sender != owner() && msg.sender != $.team) {
             revert OwnableUnauthorizedAccount(msg.sender);
+        }
+        if (_amo == $.amo) {
+            revert ValueUnchanged();
+        }
+        _setAMO($, _amo);
+    }
+
+    /**
+     * @dev Internally sets a new address for the AMO (Algorithmic Market Operations Controller). Updates the AMO
+     * address stored in the MoreMinterStorage.
+     * Ensures the new AMO address is not the zero address, upholding the validity of the AMO's address.
+     * @param $ The MoreMinterStorage instance to update.
+     * @param _amo The new address to be set for the AMO. Must be a non-zero, valid address.
+     */
+    function _setAMO(MoreMinterStorage storage $, address _amo) internal {
+        if (_amo == address(0)) {
+            revert InvalidZeroAddress();
         }
         $.amo = _amo;
     }
