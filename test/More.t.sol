@@ -22,7 +22,7 @@ contract MoreTest is Test, IERC3156FlashBorrower {
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), init);
         more = More(address(proxy));
         MoreMinter minter = new MoreMinter(address(proxy));
-        init = abi.encodeCall(minter.initialize, (address(this), address(0), address(0)));
+        init = abi.encodeCall(minter.initialize, (address(this), address(1), address(2)));
         ERC1967Proxy minterProxy = new ERC1967Proxy(address(minter), init);
         minter = MoreMinter(address(minterProxy));
         more.setMinter(address(minter));
