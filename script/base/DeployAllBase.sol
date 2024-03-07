@@ -24,8 +24,6 @@ import {PearlRouteFinder} from "../../src/periphery/PearlRouteFinder.sol";
 import {ERC4626Router} from "../../src/periphery/ERC4626Router.sol";
 
 abstract contract DeployAllBase is PearlDeploymentScript {
-    string private constant VAULT_FACTORY_KEY = "VaultFactory-v5";
-
     function run() public {
         _setup();
 
@@ -41,7 +39,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             address moreAddress = _deployMore();
             More more = More(moreAddress);
             address moreStakingVault = _deployMoreStakingVault(address(more), _chain.name, _chain.chainAlias);
-            (address vaultFactoryAddress,) = _computeProxyAddress(VAULT_FACTORY_KEY);
+            (address vaultFactoryAddress,) = _computeProxyAddress("VaultFactory");
             address moreMinter = _deployMoreMinter(address(more), vaultFactoryAddress);
             if (more.minter() != moreMinter) {
                 more.setMinter(moreMinter);
@@ -416,7 +414,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             VaultFactory.initialize.selector, vaultDeployer, borrowTokenOracle, feeReceiver, penaltyReceiver
         );
 
-        vaultFactoryProxy = _deployProxy(VAULT_FACTORY_KEY, address(vaultFactory), init);
+        vaultFactoryProxy = _deployProxy("VaultFactory", address(vaultFactory), init);
         vaultFactory = VaultFactory(vaultFactoryProxy);
 
         _saveDeploymentAddress("VaultFactory", address(vaultFactoryProxy));
@@ -473,11 +471,11 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         _deployPearlRouteFinder(pearlRouterProxy);
     }
 
-    function _deployPearlRouteFinder(address router) private returns (address pearlRouterProxy) {
+    function _deployPearlRouteFinder(address router) private returns (address pearlRouteFinderAddress) {
         address factory = _getPearlFactoryAddress();
         bytes memory bytecode = abi.encodePacked(type(PearlRouteFinder).creationCode, abi.encode(factory, router));
 
-        address pearlRouteFinderAddress = vm.computeCreate2Address(_SALT, keccak256(bytecode));
+        pearlRouteFinderAddress = vm.computeCreate2Address(_SALT, keccak256(bytecode));
 
         PearlRouteFinder pearlRouteFinder;
 
