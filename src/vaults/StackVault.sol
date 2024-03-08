@@ -735,7 +735,7 @@ contract StackVault is
         {
             uint256 borrowAmount;
 
-            (collateralAmount, collateralValue, borrowAmount, borrowValue) = userPositionInfo(account);
+            (collateralAmount, collateralValue, borrowAmount, borrowValue) = _userPositionInfo(account);
 
             if (repayAmount > borrowAmount) {
                 repayAmount = borrowAmount;
@@ -884,7 +884,9 @@ contract StackVault is
 
     /**
      * @notice Provides detailed information about a user's position in the vault.
-     * @dev Returns the amounts and values of the user's collateral and borrow.
+     * @dev Returns the amounts and values of the user's collateral and borrow. This function has a
+     * `readOnlyNonReentrant` modifier attached to prevent reentrancy attacks even in read-only operations, ensuring
+     * that the function is not called in the middle of another state-changing operation.
      * @param account The address of the user.
      * @return collateralAmount The amount of collateral deposited by the user.
      * @return collateralValue The value of the user's collateral.
@@ -892,9 +894,26 @@ contract StackVault is
      * @return borrowValue The value of the user's borrow.
      */
     function userPositionInfo(address account)
-        public
+        external
         view
         readOnlyNonReentrant
+        returns (uint256 collateralAmount, uint256 collateralValue, uint256 borrowAmount, uint256 borrowValue)
+    {
+        (collateralAmount, collateralValue, borrowAmount, borrowValue) = _userPositionInfo(account);
+    }
+
+    /**
+     * @notice Provides detailed information about a user's position in the vault.
+     * @dev Returns the amounts and values of the user's collateral and borrow.
+     * @param account The address of the user.
+     * @return collateralAmount The amount of collateral deposited by the user.
+     * @return collateralValue The value of the user's collateral.
+     * @return borrowAmount The amount of tokens borrowed by the user.
+     * @return borrowValue The value of the user's borrow.
+     */
+    function _userPositionInfo(address account)
+        internal
+        view
         returns (uint256 collateralAmount, uint256 collateralValue, uint256 borrowAmount, uint256 borrowValue)
     {
         StackVaultStorage storage $ = _getStackVaultStorage();
@@ -1188,7 +1207,7 @@ contract StackVault is
      * @param account The address of the user whose position is being checked.
      */
     function _healthcheck(address account) internal view {
-        (, uint256 collateralValue,, uint256 borrowValue) = userPositionInfo(account);
+        (, uint256 collateralValue,, uint256 borrowValue) = _userPositionInfo(account);
         if (!_isHealthy(collateralValue, borrowValue)) {
             revert Unhealthy();
         }
