@@ -197,16 +197,26 @@ contract PearlRouteFinder {
             unchecked {
                 --length;
             }
-            clone[length] = SwapStep({
-                tokenIn: path[length].tokenIn,
-                tokenOut: path[length].tokenOut,
-                pair: path[length].pair,
-                fee: path[length].fee,
-                amountIn: path[length].amountIn,
-                amountOut: path[length].amountOut
-            });
+            clone[length] = _cloneStep(path[length]);
         }
         return clone;
+    }
+
+    /**
+     * @dev Clones the given step.
+     * @notice This is used to copy the current best step during the DFS search.
+     * @param step The step to clone.
+     * @return A new SwapStep that is a clone of the given step.
+     */
+    function _cloneStep(SwapStep memory step) private pure returns (SwapStep memory) {
+        return SwapStep({
+            tokenIn: step.tokenIn,
+            tokenOut: step.tokenOut,
+            pair: step.pair,
+            fee: step.fee,
+            amountIn: step.amountIn,
+            amountOut: step.amountOut
+        });
     }
 
     /**
