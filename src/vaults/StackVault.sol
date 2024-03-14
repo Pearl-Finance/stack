@@ -92,6 +92,7 @@ contract StackVault is
     error InvalidLiquidationThreshold(uint8 min, uint8 max, uint8 actual);
     error LeverageFlashloanFailed();
     error LiquidationFailed(address liquidator, address account);
+    error RebaseDetected();
     error Unhealthy();
     error UntrustedSwapTarget(address target);
 
@@ -152,6 +153,14 @@ contract StackVault is
             revert ReentrancyGuardReentrantCall();
         }
         _;
+    }
+
+    modifier noRebase() {
+        uint256 _totalSupply = collateralToken.totalSupply();
+        _;
+        if (_totalSupply < collateralToken.totalSupply()) {
+            revert RebaseDetected();
+        }
     }
 
     receive() external payable {
@@ -610,6 +619,7 @@ contract StackVault is
         payable
         healthcheck
         nonReentrant
+        noRebase
     {
         accrueInterest();
 
@@ -638,6 +648,7 @@ contract StackVault is
         external
         healthcheck
         nonReentrant
+        noRebase
     {
         accrueInterest();
 
