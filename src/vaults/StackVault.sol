@@ -364,9 +364,6 @@ contract StackVault is
         accrueInterest();
         StackVaultStorage storage $ = _getStackVaultStorage();
         uint256 oldMultiplier = $.interestRateMultiplier;
-        if (oldMultiplier == _interestRateMultiplier) {
-            revert ValueUnchanged();
-        }
         _updateInterestRateMultiplier($, oldMultiplier, _interestRateMultiplier);
     }
 
@@ -392,6 +389,9 @@ contract StackVault is
      */
     function retire() external onlyFactory {
         StackVaultStorage storage $ = _getStackVaultStorage();
+        if ($.isRetired) {
+            revert ValueUnchanged();
+        }
         $.isRetired = true;
         emit VaultRetired();
     }
@@ -402,6 +402,9 @@ contract StackVault is
      */
     function revive() external onlyFactory {
         StackVaultStorage storage $ = _getStackVaultStorage();
+        if (!$.isRetired) {
+            revert ValueUnchanged();
+        }
         $.isRetired = false;
         emit VaultRevived();
     }

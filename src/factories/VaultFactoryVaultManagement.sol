@@ -93,11 +93,7 @@ abstract contract VaultFactoryVaultManagement is
      * @param vault The address of the vault to retire.
      */
     function retireVault(address payable vault) external onlyOwner {
-        StackVault _vault = _requireVault(vault);
-        if (_vault.isRetired()) {
-            revert ValueUnchanged();
-        }
-        _vault.retire();
+        _requireVault(vault).retire();
     }
 
     /**
@@ -109,11 +105,7 @@ abstract contract VaultFactoryVaultManagement is
      * @param vault The address of the vault to revive.
      */
     function reviveVault(address payable vault) external onlyOwner {
-        StackVault _vault = _requireVault(vault);
-        if (!_vault.isRetired()) {
-            revert ValueUnchanged();
-        }
-        _vault.revive();
+        _requireVault(vault).revive();
     }
 
     /**
@@ -127,8 +119,7 @@ abstract contract VaultFactoryVaultManagement is
      * @param multiplier The new interest rate multiplier to be set.
      */
     function setBorrowInterestMultiplier(address payable vault, uint256 multiplier) external onlyOwner {
-        StackVault _vault = _requireVault(vault);
-        _vault.setInterestRateMultiplier(multiplier);
+        _requireVault(vault).setInterestRateMultiplier(multiplier);
     }
 
     /**
@@ -172,12 +163,7 @@ abstract contract VaultFactoryVaultManagement is
      * @param newFee The new borrow opening fee to be set.
      */
     function setBorrowOpeningFee(address payable vault, uint256 newFee) public onlyOwner {
-        StackVault _vault = _requireVault(vault);
-        uint256 oldFee = _vault.borrowOpeningFee();
-        if (oldFee == newFee) {
-            revert ValueUnchanged();
-        }
-        _vault.setBorrowOpeningFee(newFee);
+        _requireVault(vault).setBorrowOpeningFee(newFee);
     }
 
     /**
@@ -190,12 +176,7 @@ abstract contract VaultFactoryVaultManagement is
      * @param newOracle The address of the new oracle to be set for the borrow token price feeds.
      */
     function setBorrowTokenOracle(address payable vault, address newOracle) public onlyOwner {
-        StackVault _vault = _requireVault(vault);
-        address oldOracle = _vault.borrowTokenOracle();
-        if (oldOracle == newOracle) {
-            revert ValueUnchanged();
-        }
-        _vault.setBorrowTokenOracle(newOracle);
+        _requireVault(vault).setBorrowTokenOracle(newOracle);
     }
 
     /**
@@ -208,12 +189,7 @@ abstract contract VaultFactoryVaultManagement is
      * @param newOracle The address of the new oracle to be set for the collateral token price feeds.
      */
     function setCollateralTokenOracle(address payable vault, address newOracle) public onlyOwner {
-        StackVault _vault = _requireVault(vault);
-        address oldOracle = _vault.collateralTokenOracle();
-        if (oldOracle == newOracle) {
-            revert ValueUnchanged();
-        }
-        _vault.setCollateralTokenOracle(newOracle);
+        _requireVault(vault).setCollateralTokenOracle(newOracle);
     }
 
     /**
@@ -227,12 +203,7 @@ abstract contract VaultFactoryVaultManagement is
      * @param newFee The new liquidation penalty fee to be set.
      */
     function setLiquidationPenaltyFee(address payable vault, uint256 newFee) public onlyOwner {
-        StackVault _vault = _requireVault(vault);
-        uint256 oldFee = _vault.liquidationPenaltyFee();
-        if (oldFee == newFee) {
-            revert ValueUnchanged();
-        }
-        _vault.setLiquidationPenaltyFee(newFee);
+        _requireVault(vault).setLiquidationPenaltyFee(newFee);
     }
 
     /**
