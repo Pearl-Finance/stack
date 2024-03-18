@@ -111,6 +111,7 @@ contract StackVault is
         mapping(address => uint256) userCollateralShare;
         mapping(address => uint256) userBorrowShare;
         mapping(address => uint256) userBorrowAmount;
+        address borrowTokenOracle;
     }
 
     // keccak256(abi.encode(uint256(keccak256("pearl.storage.StackVault")) - 1)) & ~bytes32(uint256(0xff))
@@ -243,6 +244,22 @@ contract StackVault is
      * @param newImplementation The address of the new contract implementation.
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    /**
+     * @notice Sets the oracle address for the borrow token. This overrides the default oracle set in the factory. If
+     * the new oracle is set to the zero address, the default oracle is used.
+     * @dev Updates the oracle used for pricing the borrow token. Only callable by the factory.
+     * @param newOracle The new oracle address for the borrow token.
+     */
+    function setBorrowTokenOracle(address newOracle) public onlyFactory {
+        StackVaultStorage storage $ = _getStackVaultStorage();
+        address oldOracle = $.borrowTokenOracle;
+        if (oldOracle == newOracle) {
+            revert ValueUnchanged();
+        }
+        $.borrowTokenOracle = newOracle;
+        emit CollateralTokenOracleUpdated(oldOracle, newOracle);
+    }
 
     /**
      * @notice Sets the oracle address for the collateral token.
@@ -800,6 +817,18 @@ contract StackVault is
      */
     function isRetired() external view returns (bool _retired) {
         _retired = _getStackVaultStorage().isRetired;
+    }
+
+    /**
+     * @notice Gets the address of the borrow token oracle.
+     * @dev Returns the oracle address used for obtaining the price of the borrow token.
+     * @return _borrowTokenOracle The address of the borrow token oracle.
+     */
+    function borrowTokenOracle() public view returns (address _borrowTokenOracle) {
+        _borrowTokenOracle = _getStackVaultStorage().borrowTokenOracle;
+        if (_borrowTokenOracle == address(0)) {
+            _borrowTokenOracle = _factory.borrowTokenOracle();
+        }
     }
 
     /**

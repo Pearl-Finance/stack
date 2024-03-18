@@ -181,6 +181,24 @@ abstract contract VaultFactoryVaultManagement is
     }
 
     /**
+     * @notice Updates the oracle address used for borrow token price feeds for a specific vault.
+     * @dev Sets a new oracle for obtaining borrow token price feeds, replacing the existing oracle address for the
+     * specified vault. This function can only be called by the contract owner. It ensures that the new oracle address
+     * differs from the current one to prevent unnecessary state changes. The oracle is critical for calculating the
+     * collateralization ratio and managing loan security.
+     * @param vault The address of the vault for which to update the borrow token oracle.
+     * @param newOracle The address of the new oracle to be set for the borrow token price feeds.
+     */
+    function setBorrowTokenOracle(address payable vault, address newOracle) public onlyOwner {
+        StackVault _vault = _requireVault(vault);
+        address oldOracle = _vault.borrowTokenOracle();
+        if (oldOracle == newOracle) {
+            revert ValueUnchanged();
+        }
+        _vault.setBorrowTokenOracle(newOracle);
+    }
+
+    /**
      * @notice Updates the oracle address used for collateral token price feeds for a specific vault.
      * @dev Sets a new oracle for obtaining collateral token price feeds, replacing the existing oracle address for the
      * specified vault. This function can only be called by the contract owner. It ensures that the new oracle address
