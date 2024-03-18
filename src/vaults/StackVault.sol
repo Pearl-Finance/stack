@@ -99,6 +99,7 @@ contract StackVault is
     /// @custom:storage-location erc7201:pearl.storage.StackVault
     struct StackVaultStorage {
         bool isRetired;
+        address borrowTokenOracle;
         address collateralTokenOracle;
         uint256 borrowLimit;
         uint256 liquidationThreshold;
@@ -111,7 +112,6 @@ contract StackVault is
         mapping(address => uint256) userCollateralShare;
         mapping(address => uint256) userBorrowShare;
         mapping(address => uint256) userBorrowAmount;
-        address borrowTokenOracle;
     }
 
     // keccak256(abi.encode(uint256(keccak256("pearl.storage.StackVault")) - 1)) & ~bytes32(uint256(0xff))

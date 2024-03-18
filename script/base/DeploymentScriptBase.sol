@@ -55,7 +55,7 @@ abstract contract DeploymentScriptBase is Script {
      * customization of the deployment process, as different salts lead to different deterministic addresses.
      */
     constructor(bytes memory _salt) {
-        _SALT = keccak256(_salt);
+        _SALT = keccak256(bytes.concat(_salt, "-20240318"));
     }
 
     /**
@@ -178,9 +178,10 @@ abstract contract DeploymentScriptBase is Script {
             }
         } else {
             ERC1967Proxy proxy = new ERC1967Proxy{salt: salt}(_emptyUUPS, "");
-            assert(proxyAddress == address(proxy));
+            proxyAddress = address(proxy);
             UUPSUpgradeable(address(proxy)).upgradeToAndCall(implementation, data);
             console.log("%s proxy deployed to %s", forContract, proxyAddress);
+            _saveDeploymentAddress(forContract, address(proxy));
         }
     }
 

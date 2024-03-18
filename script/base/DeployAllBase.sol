@@ -41,6 +41,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             More more = More(moreAddress);
             address moreStakingVault = _deployMoreStakingVault(address(more), _chain.name, _chain.chainAlias);
             (address vaultFactoryAddress,) = _computeProxyAddress("VaultFactory");
+            console.log("Predicted vault factory address: %s", vaultFactoryAddress);
             address moreMinter = _deployMoreMinter(address(more), vaultFactoryAddress);
             if (more.minter() != moreMinter) {
                 more.setMinter(moreMinter);
@@ -54,26 +55,13 @@ abstract contract DeployAllBase is PearlDeploymentScript {
                 feeReceivers[0] = _getGelatoMessageSender();
             }
             address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault, feeReceivers);
-            address moreOracle = _deployCappedOracle(
-                "MOREOracle", _deployOracleWrapper("MOREOracleWrapper", address(more), _getMOREOracle()), 1e18
-            );
+            address moreOracleWrapper = _deployOracleWrapper("MOREOracleWrapper", address(more), _getMOREOracle());
+            address moreOracle = _deployCappedOracle("CappedMOREOracle", moreOracleWrapper, 1e18);
+            _deployStaticOracle("StaticMOREOracle", address(more), 1e18);
             if (_chain.chainId == getChain("unreal").chainId) {
-                //_deployOracleWrapper("DAIOracleWrapper", , _getDAIOracle());
+                _deployOracleWrapper("DAIOracleWrapper", _getDAI(), _getDAIOracle());
                 _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), _getETHOracle());
             }
-            /*
-            address moreOracle = _deployMoreOracle(address(more));
-            address ustbOracle = _deployUSTBOracle(address(_getUSTBAddress())); // todo: generic function to deploy
-            CappedPriceOracle
-            if (_chain.chainId == getChain("unreal").chainId) {
-                _deployOracleWrapper(
-                    "DAIOracleWrapper",
-                    0x665D4921fe931C0eA1390Ca4e0C422ba34d26169,
-                    0xDC8Dd6e991cB1d9F2B4137294ee3EFE6D990d917
-                );
-            _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), 0xde2b7274F5248DF7D90Fc634501eE31406FeDAe6);
-            }
-            */
             address implementationDeployer = _deployVaultImplementationDeployer();
             address vaultDeployer = _deployVaultDeployer(vaultFactoryAddress, implementationDeployer);
             address vaultFactory = _deployVaultFactory(moreMinter, moreOracle, vaultDeployer, feeSplitter);
@@ -113,6 +101,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
     function _getTeamWallet() internal pure virtual returns (address);
 
     function _getAMO() internal pure virtual returns (address);
+
+    function _getDAI() internal virtual returns (address);
 
     function _getWETH9() internal virtual returns (address);
 
@@ -159,8 +149,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             _deployer // initial minter
         );
 
-        moreProxy = _deployProxy("More", address(more), init);
-        _saveDeploymentAddress("MORE", address(moreProxy));
+        moreProxy = _deployProxy("MORE", address(more), init);
     }
 
     function _deployMoreStakingVault(address more, string memory chainName, string memory chainSymbol)
@@ -184,8 +173,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
         bytes memory init = abi.encodeWithSelector(MoreStakingVault.initialize.selector, more, chainName, chainSymbol);
 
-        proxy = _deployProxy("MoreStakingVault", address(vault), init);
-        _saveDeploymentAddress("sMORE", address(proxy));
+        proxy = _deployProxy("sMORE", address(vault), init);
     }
 
     function _deployMoreMinter(address more, address vaultFactoryAddress) private returns (address moreMinterProxy) {
@@ -223,8 +211,6 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         if (minter.amo() != amo) {
             minter.setAMO(amo);
         }
-
-        _saveDeploymentAddress("MoreMinter", address(moreMinterProxy));
     }
 
     function _deployFeeSplitter(address token, address moreStakingVaultAddress, address[] memory feeReceivers)
@@ -248,8 +234,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
         bytes memory init = abi.encodeCall(feeSplitter.initialize, ());
 
-        feeSplitterProxy = _deployProxy("FeeSplitter-v2", address(feeSplitter), init);
-        _saveDeploymentAddress("FeeSplitter", address(feeSplitterProxy));
+        feeSplitterProxy = _deployProxy("FeeSplitter", address(feeSplitter), init);
 
         address[] memory receivers = new address[](1 + feeReceivers.length);
         uint96[] memory splits = new uint96[](receivers.length);
@@ -293,46 +278,6 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         }
     }
 
-    function _deployMoreOracle(address more) private returns (address moreOracleAddress) {
-        bytes memory bytecode = abi.encodePacked(type(StaticPriceOracle).creationCode);
-
-        moreOracleAddress =
-            vm.computeCreate2Address(_SALT, keccak256(abi.encodePacked(bytecode, abi.encode(more, 1e18, 18))));
-
-        StaticPriceOracle moreOracle;
-
-        if (_isDeployed(moreOracleAddress)) {
-            console.log("MORE Oracle is already deployed to %s", moreOracleAddress);
-            moreOracle = StaticPriceOracle(moreOracleAddress);
-        } else {
-            moreOracle = new StaticPriceOracle{salt: _SALT}(more, 1e18, 18);
-            assert(moreOracleAddress == address(moreOracle));
-            console.log("MORE Oracle deployed to %s", moreOracleAddress);
-        }
-
-        _saveDeploymentAddress("MoreOracle", address(moreOracle));
-    }
-
-    function _deployUSTBOracle(address ustb) private returns (address ustbOracleAddress) {
-        bytes memory bytecode = abi.encodePacked(type(StaticPriceOracle).creationCode);
-
-        ustbOracleAddress =
-            vm.computeCreate2Address(_SALT, keccak256(abi.encodePacked(bytecode, abi.encode(ustb, 1e18, 18))));
-
-        StaticPriceOracle ustbOracle;
-
-        if (_isDeployed(ustbOracleAddress)) {
-            console.log("USTB Oracle is already deployed to %s", ustbOracleAddress);
-            ustbOracle = StaticPriceOracle(ustbOracleAddress);
-        } else {
-            ustbOracle = new StaticPriceOracle{salt: _SALT}(ustb, 1e18, 18);
-            assert(ustbOracleAddress == address(ustbOracle));
-            console.log("USTB Oracle deployed to %s", ustbOracleAddress);
-        }
-
-        _saveDeploymentAddress("USTBOracle", address(ustbOracle));
-    }
-
     function _deployCappedOracle(string memory key, address underlyingOracle, uint256 priceCap)
         private
         returns (address cappedOracleAddress)
@@ -355,6 +300,29 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         }
 
         _saveDeploymentAddress(key, address(cappedOracle));
+    }
+
+    function _deployStaticOracle(string memory key, address token, uint256 price)
+        private
+        returns (address staticOracleAddress)
+    {
+        bytes memory bytecode = abi.encodePacked(type(StaticPriceOracle).creationCode);
+
+        staticOracleAddress =
+            vm.computeCreate2Address(_SALT, keccak256(abi.encodePacked(bytecode, abi.encode(token, price, 18))));
+
+        StaticPriceOracle staticOracle;
+
+        if (_isDeployed(staticOracleAddress)) {
+            console.log("Static Oracle (%s) is already deployed to %s", key, staticOracleAddress);
+            staticOracle = StaticPriceOracle(staticOracleAddress);
+        } else {
+            staticOracle = new StaticPriceOracle{salt: _SALT}(token, price, 18);
+            assert(staticOracleAddress == address(staticOracle));
+            console.log("Static Oracle (%s) deployed to %s", key, staticOracleAddress);
+        }
+
+        _saveDeploymentAddress(key, address(staticOracle));
     }
 
     function _deployOracleWrapper(string memory key, address token, address aggregatorV3)
@@ -423,8 +391,6 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         bytes memory init = abi.encodeWithSelector(VaultDeployer.initialize.selector);
 
         vaultDeployerProxy = _deployProxy("VaultDeployer", address(vaultDeployer), init);
-
-        _saveDeploymentAddress("VaultDeployer", address(vaultDeployerProxy));
     }
 
     function _deployVaultFactory(
@@ -457,8 +423,6 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
         vaultFactoryProxy = _deployProxy("VaultFactory", address(vaultFactory), init);
         vaultFactory = VaultFactory(vaultFactoryProxy);
-
-        _saveDeploymentAddress("VaultFactory", address(vaultFactoryProxy));
 
         if (vaultFactory.interestRateManager() != _getGelatoMessageSender()) {
             vaultFactory.setInterestRateManager(_getGelatoMessageSender());
@@ -499,8 +463,6 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
         pearlRouterProxy = _deployProxy("PearlRouter", address(pearlRouter), init);
         pearlRouter = PearlRouter(pearlRouterProxy);
-
-        _saveDeploymentAddress("PearlRouter", address(pearlRouterProxy));
 
         if (pearlRouter.getSwapRouter() != swapRouterAddress) {
             pearlRouter.setSwapRouter(swapRouterAddress);

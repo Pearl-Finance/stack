@@ -33,6 +33,10 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: AMO address not set");
     }
 
+    function _getDAI() internal pure override returns (address) {
+        revert("DeployAll: DAI address not set");
+    }
+
     function _getWETH9() internal pure override returns (address) {
         revert("DeployAll: WETH9 address not set");
     }
