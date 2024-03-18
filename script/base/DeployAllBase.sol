@@ -16,6 +16,7 @@ import {FeeSplitter} from "../../src/periphery/FeeSplitter.sol";
 import {VaultDeployer} from "../../src/factories/VaultDeployer.sol";
 import {VaultImplementationDeployer} from "../../src/factories/VaultImplementationDeployer.sol";
 import {VaultFactory} from "../../src/factories/VaultFactory.sol";
+import {CappedPriceOracle} from "../../src/oracles/CappedPriceOracle.sol";
 import {StaticPriceOracle} from "../../src/oracles/StaticPriceOracle.sol";
 import {StackVault} from "../../src/vaults/StackVault.sol";
 import {AggregatorV3Wrapper} from "../../src/oracles/AggregatorV3Wrapper.sol";
@@ -45,7 +46,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
                 more.setMinter(moreMinter);
             }
             address[] memory feeReceivers;
-            if (_chain.chainId == 18231) {
+            if (_chain.chainId == getChain("unreal").chainId) {
                 feeReceivers = new address[](1);
                 feeReceivers[0] = _getTangibleRevenueDistributor();
             } else {
@@ -53,16 +54,26 @@ abstract contract DeployAllBase is PearlDeploymentScript {
                 feeReceivers[0] = _getGelatoMessageSender();
             }
             address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault, feeReceivers);
+            address moreOracle = _deployCappedOracle(
+                "MOREOracle", _deployOracleWrapper("MOREOracleWrapper", address(more), _getMOREOracle()), 1e18
+            );
+            if (_chain.chainId == getChain("unreal").chainId) {
+                //_deployOracleWrapper("DAIOracleWrapper", , _getDAIOracle());
+                _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), _getETHOracle());
+            }
+            /*
             address moreOracle = _deployMoreOracle(address(more));
-            address ustbOracle = _deployUSTBOracle(address(_getUSTBAddress()));
-            if (_chain.chainId == 18231) {
+            address ustbOracle = _deployUSTBOracle(address(_getUSTBAddress())); // todo: generic function to deploy
+            CappedPriceOracle
+            if (_chain.chainId == getChain("unreal").chainId) {
                 _deployOracleWrapper(
                     "DAIOracleWrapper",
                     0x665D4921fe931C0eA1390Ca4e0C422ba34d26169,
                     0xDC8Dd6e991cB1d9F2B4137294ee3EFE6D990d917
                 );
-                _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), 0xde2b7274F5248DF7D90Fc634501eE31406FeDAe6);
+            _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), 0xde2b7274F5248DF7D90Fc634501eE31406FeDAe6);
             }
+            */
             address implementationDeployer = _deployVaultImplementationDeployer();
             address vaultDeployer = _deployVaultDeployer(vaultFactoryAddress, implementationDeployer);
             address vaultFactory = _deployVaultFactory(moreMinter, moreOracle, vaultDeployer, feeSplitter);
@@ -103,9 +114,15 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
     function _getAMO() internal pure virtual returns (address);
 
-    function _getWETH9() internal pure virtual returns (address);
+    function _getWETH9() internal virtual returns (address);
 
     function _getTangibleRevenueDistributor() internal pure virtual returns (address);
+
+    function _getMOREOracle() internal virtual returns (address);
+
+    function _getDAIOracle() internal virtual returns (address);
+
+    function _getETHOracle() internal virtual returns (address);
 
     /**
      * @dev Virtual function to be overridden in derived contracts to provide an array of chain aliases where the MORE
@@ -316,6 +333,30 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         _saveDeploymentAddress("USTBOracle", address(ustbOracle));
     }
 
+    function _deployCappedOracle(string memory key, address underlyingOracle, uint256 priceCap)
+        private
+        returns (address cappedOracleAddress)
+    {
+        bytes memory bytecode = abi.encodePacked(type(CappedPriceOracle).creationCode);
+
+        cappedOracleAddress = vm.computeCreate2Address(
+            _SALT, keccak256(abi.encodePacked(bytecode, abi.encode(underlyingOracle, priceCap)))
+        );
+
+        CappedPriceOracle cappedOracle;
+
+        if (_isDeployed(cappedOracleAddress)) {
+            console.log("Capped Oracle (%s) is already deployed to %s", key, cappedOracleAddress);
+            cappedOracle = CappedPriceOracle(cappedOracleAddress);
+        } else {
+            cappedOracle = new CappedPriceOracle{salt: _SALT}(underlyingOracle, priceCap);
+            assert(cappedOracleAddress == address(cappedOracle));
+            console.log("Capped Oracle (%s) deployed to %s", key, cappedOracleAddress);
+        }
+
+        _saveDeploymentAddress(key, address(cappedOracle));
+    }
+
     function _deployOracleWrapper(string memory key, address token, address aggregatorV3)
         private
         returns (address wrappedOracleAddress)
@@ -328,12 +369,12 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         AggregatorV3Wrapper wrappedOracle;
 
         if (_isDeployed(wrappedOracleAddress)) {
-            console.log("Wrapped oracle for %s is already deployed to %s", token, wrappedOracleAddress);
+            console.log("Wrapped oracle (%s) for %s is already deployed to %s", key, token, wrappedOracleAddress);
             wrappedOracle = AggregatorV3Wrapper(wrappedOracleAddress);
         } else {
             wrappedOracle = new AggregatorV3Wrapper{salt: _SALT}(token, aggregatorV3);
             assert(wrappedOracleAddress == address(wrappedOracle));
-            console.log("Wrapped Oracle for %s deployed to %s", wrappedOracleAddress);
+            console.log("Wrapped Oracle (%s) for %s deployed to %s", key, token, wrappedOracleAddress);
         }
 
         _saveDeploymentAddress(key, address(wrappedOracle));
@@ -544,7 +585,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         } else if (chain == keccak256("polygon_mumbai")) {
             return 10109;
         } else if (chain == keccak256("unreal")) {
-            return 10252;
+            return 10262;
         } else {
             revert("Unsupported chain");
         }
@@ -584,7 +625,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         } else if (chainId == getChain("polygon_mumbai").chainId) {
             lzEndpoint = 0xf69186dfBa60DdB133E91E9A4B5673624293d8F8;
         } else if (chainId == getChain("unreal").chainId) {
-            lzEndpoint = 0x2cA20802fd1Fd9649bA8Aa7E50F0C82b479f35fe;
+            lzEndpoint = 0x83c73Da98cf733B03315aFa8758834b36a195b87;
         } else {
             revert("No LayerZero endpoint defined for this chain.");
         }

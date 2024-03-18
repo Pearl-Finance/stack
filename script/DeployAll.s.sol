@@ -41,6 +41,18 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: Tangible Revenue Distributor address not set");
     }
 
+    function _getMOREOracle() internal virtual override returns (address) {
+        revert("DeployAll: MORE Oracle address not set");
+    }
+
+    function _getDAIOracle() internal override returns (address) {
+        revert("DeployAll: DAI oracle address not set");
+    }
+
+    function _getETHOracle() internal override returns (address) {
+        revert("DeployAll: ETH oracle address not set");
+    }
+
     function _getDeploymentChainAliases() internal pure override returns (string[] memory aliases) {
         aliases = new string[](4);
         aliases[0] = "real";
