@@ -779,7 +779,7 @@ contract StackVault is
 
         borrowToken.safeTransferFrom(msg.sender, address(this), repayAmount);
 
-        address _borrowTokenOracle = _factory.borrowTokenOracle();
+        address _borrowTokenOracle = borrowTokenOracle();
         address _collateralTokenOracle = $.collateralTokenOracle;
 
         uint256 repaidCollateralAmount =
@@ -970,7 +970,7 @@ contract StackVault is
         }
 
         if (borrowShare != 0) {
-            address oracle = _factory.borrowTokenOracle();
+            address oracle = borrowTokenOracle();
             borrowAmount = $.totalBorrowAmount.toTotalAmount(borrowShare, Math.Rounding.Ceil);
             borrowValue = IOracle(oracle).valueOf(borrowAmount, Math.Rounding.Floor);
         }
