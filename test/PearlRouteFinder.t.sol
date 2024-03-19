@@ -16,11 +16,11 @@ contract PearlRouteFinderTest is Test {
     PearlRouteFinder finder;
 
     function setUp() public {
-        vm.createSelectFork(UNREAL_RPC_URL, 56450);
+        vm.createSelectFork(UNREAL_RPC_URL, 8343);
 
-        address pearlFactory = 0x5A9aA74caceede5eAbBeDE2F425faEB85fdCE2f2;
-        address pearlRouter = 0x4b15F7725a6B0dbb51421220c445fE3f57Bfca8b;
-        address pearlQuoter = 0x96A3A276ACd970248c833E11a25c786e689cbaC9;
+        address pearlFactory = 0xDfCD83D2F29cF1E05F267927C102c0e3Dc2BD725;
+        address pearlRouter = 0x0a42599e0840aa292C76620dC6d4DAfF23DB5236;
+        address pearlQuoter = 0x6B6dA57BA5E77Ed5504Fe778449056fbb18020D5;
 
         PearlRouter routerImplementation = new PearlRouter();
         ERC1967Proxy routerProxy = new ERC1967Proxy(
@@ -32,7 +32,7 @@ contract PearlRouteFinderTest is Test {
     }
 
     function test_findBestSwapPath() public {
-        address more = 0x3CD7AB62b0A96CC5c23490d0893084b58A98A1Dc;
+        address more = 0x358404909b986A34Eb551d62178cDf72Cd1ca16f;
         address ustb = 0x83feDBc0B85c6e29B589aA6BdefB1Cc581935ECD;
         address pearl = 0xCE1581d7b4bA40176f0e219b2CaC30088Ad50C7A;
 
