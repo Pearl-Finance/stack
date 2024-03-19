@@ -16,6 +16,7 @@ import {FeeSplitter} from "../../src/periphery/FeeSplitter.sol";
 import {VaultDeployer} from "../../src/factories/VaultDeployer.sol";
 import {VaultImplementationDeployer} from "../../src/factories/VaultImplementationDeployer.sol";
 import {VaultFactory} from "../../src/factories/VaultFactory.sol";
+import {InterestRateOracle} from "../../src/oracles/InterestRateOracle.sol";
 import {CappedPriceOracle} from "../../src/oracles/CappedPriceOracle.sol";
 import {StaticPriceOracle} from "../../src/oracles/StaticPriceOracle.sol";
 import {StackVault} from "../../src/vaults/StackVault.sol";
@@ -54,6 +55,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
                 feeReceivers = new address[](1);
                 feeReceivers[0] = _getGelatoMessageSender();
             }
+            _deployInterestRateOracle("USTBInterestRateOracle", _getUSTBAddress(), 0.05e18);
             address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault, feeReceivers);
             address moreOracleWrapper = _deployOracleWrapper("MOREOracleWrapper", address(more), _getMOREOracle());
             address moreOracle = _deployCappedOracle("CappedMOREOracle", moreOracleWrapper, 1e18);
@@ -276,6 +278,32 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         if (shouldUpdate) {
             feeSplitter.setReceivers(receivers, splits);
         }
+    }
+
+    function _deployInterestRateOracle(string memory key, address token, uint256 initialAPR)
+        private
+        returns (address interestRateOracleAddress)
+    {
+        bytes memory bytecode = abi.encodePacked(type(InterestRateOracle).creationCode);
+
+        interestRateOracleAddress = vm.computeCreate2Address(
+            _SALT,
+            keccak256(abi.encodePacked(bytecode, abi.encode(token, _deployer, _getGelatoMessageSender(), initialAPR)))
+        );
+
+        InterestRateOracle interestRateOracle;
+
+        if (_isDeployed(interestRateOracleAddress)) {
+            console.log("Interest Rate Oracle (%s) is already deployed to %s", key, interestRateOracleAddress);
+            interestRateOracle = InterestRateOracle(interestRateOracleAddress);
+        } else {
+            interestRateOracle =
+                new InterestRateOracle{salt: _SALT}(token, _deployer, _getGelatoMessageSender(), initialAPR);
+            assert(interestRateOracleAddress == address(interestRateOracle));
+            console.log("Interest Rate Oracle (%s) deployed to %s", key, interestRateOracleAddress);
+        }
+
+        _saveDeploymentAddress(key, address(interestRateOracle));
     }
 
     function _deployCappedOracle(string memory key, address underlyingOracle, uint256 priceCap)
