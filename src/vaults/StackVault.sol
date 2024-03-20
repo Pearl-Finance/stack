@@ -157,10 +157,14 @@ contract StackVault is
     }
 
     modifier noRebase() {
-        uint256 _totalSupply = collateralToken.totalSupply();
-        _;
-        if (_totalSupply < collateralToken.totalSupply()) {
-            revert RebaseDetected();
+        if (_isNativeCollateralToken) {
+            _;
+        } else {
+            uint256 _totalSupply = collateralToken.totalSupply();
+            _;
+            if (_totalSupply < collateralToken.totalSupply()) {
+                revert RebaseDetected();
+            }
         }
     }
 
