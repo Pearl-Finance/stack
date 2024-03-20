@@ -82,7 +82,7 @@ contract StackVaultTest is Test {
         vault = StackVault(factory.createVault(address(collateralToken), address(collateralTokenOracle), 90, 1e1));
         ethVault = StackVault(factory.createVault(Constants.ETH_ADDRESS, address(collateralTokenOracle), 80, 1e1));
 
-        factory.updateBorrowInterestRate(0.99e18);
+        factory.overrideBorrowInterestRate(0.02e18);
 
         borrowToken.approve(address(factory), 1_000e18);
         factory.setBorrowLimit(payable(address(vault)), 1_000e18);
@@ -104,7 +104,7 @@ contract StackVaultTest is Test {
 
         uint256 interestRate = vault.interestRatePerSecond() * 365 days;
         uint256 trimmedInterestRate = interestRate / 1e13 * 1e13;
-        assertEq(trimmedInterestRate, 0.02022e18);
+        assertEq(trimmedInterestRate, 0.01999e18);
     }
 
     function testDeposit() public {

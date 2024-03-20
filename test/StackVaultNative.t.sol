@@ -71,7 +71,7 @@ contract StackVaultNativeTest is Test {
 
         vault = StackVault(factory.createVault(Constants.ETH_ADDRESS, address(collateralTokenOracle), 80, 1e1));
 
-        factory.updateBorrowInterestRate(0.99e18);
+        factory.overrideBorrowInterestRate(0.02e18);
 
         borrowToken.approve(address(factory), 5_000e18);
         factory.setBorrowLimit(payable(address(vault)), 5_000e18);
@@ -93,7 +93,7 @@ contract StackVaultNativeTest is Test {
 
         uint256 interestRate = vault.interestRatePerSecond() * 365 days;
         uint256 trimmedInterestRate = interestRate / 1e13 * 1e13;
-        assertEq(trimmedInterestRate, 0.02022e18);
+        assertEq(trimmedInterestRate, 0.01999e18);
     }
 
     function testDeposit() public {
