@@ -39,8 +39,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             vm.createSelectFork(deploymentChainAliases[i]);
             vm.startBroadcast(_pk);
             address moreAddress = _deployMore();
+            address moreStakingVault = _deployMoreStakingVault(moreAddress, _chain.name, _chain.chainAlias);
             More more = More(moreAddress);
-            address moreStakingVault = _deployMoreStakingVault(address(more), _chain.name, _chain.chainAlias);
             (address vaultFactoryAddress,) = _computeProxyAddress("VaultFactory");
             console.log("Predicted vault factory address: %s", vaultFactoryAddress);
             address moreMinter = _deployMoreMinter(address(more), vaultFactoryAddress);

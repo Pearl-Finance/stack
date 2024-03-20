@@ -416,7 +416,8 @@ contract StackVault is
      */
     function interestRatePerSecond() public view returns (uint256 rate) {
         StackVaultStorage storage $ = _getStackVaultStorage();
-        rate = _factory.borrowInterestRate() * $.interestRateMultiplier / 365 days;
+        rate = _factory.borrowInterestRate() * $.interestRateMultiplier
+            / (Constants.INTEREST_RATE_MULTIPLIER_PRECISION * 365 days);
     }
 
     /**
