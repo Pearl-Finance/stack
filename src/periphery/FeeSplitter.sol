@@ -37,7 +37,7 @@ import {CommonErrors} from "../interfaces/CommonErrors.sol";
 contract FeeSplitter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     using SafeERC20 for IERC20;
 
-    uint256 private constant CHECKPOINT_INTERVAL = 1 days;
+    uint256 private constant CHECKPOINT_INTERVAL = 1 days - 2 minutes;
     uint256 private constant CHECKPOINT_HISTORY_LENGTH = 2;
 
     address public immutable token;
