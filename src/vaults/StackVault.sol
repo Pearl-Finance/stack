@@ -677,8 +677,6 @@ contract StackVault is
     {
         accrueInterest();
 
-        _checkSwapTarget(swapTarget);
-
         address account = msg.sender;
 
         _subtractAmountFromCollateral(account, withdrawalAmount);
