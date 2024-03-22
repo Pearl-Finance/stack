@@ -176,7 +176,8 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
             sqrtPriceLimitX96: 0
         });
 
-        bytes4 selector = feeOnTransfer ? IRouter.exactInputFeeOnTransfer.selector : IRouter.exactInput.selector;
+        bytes4 selector =
+            feeOnTransfer ? IRouter.exactInputSingleFeeOnTransfer.selector : IRouter.exactInputSingle.selector;
         return _processTokenSwap(IERC20(tokenIn), amountIn, abi.encodeWithSelector(selector, (params)));
     }
 
