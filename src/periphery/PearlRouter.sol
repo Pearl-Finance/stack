@@ -165,6 +165,7 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         uint24 fee,
         bool feeOnTransfer
     ) external returns (uint256) {
+        amountIn = _pullToken(IERC20(tokenIn), msg.sender, amountIn, feeOnTransfer);
         IRouter.ExactInputSingleParams memory params = IRouter.ExactInputSingleParams({
             tokenIn: tokenIn,
             tokenOut: tokenOut,
@@ -205,6 +206,7 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         returns (uint256)
     {
         address tokenIn = _firstAddressInPath(path);
+        amountIn = _pullToken(IERC20(tokenIn), msg.sender, amountIn, feeOnTransfer);
         IRouter.ExactInputParams memory params = IRouter.ExactInputParams({
             path: path,
             recipient: msg.sender,
@@ -308,6 +310,28 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     }
 
     /**
+     * @notice Transfers the specified `amount` of `token` from `from` to this contract.
+     * @dev This internal function transfers the specified `amount` of `token` from `from` to this contract and returns
+     * the actual amount transferred.
+     * @param token The ERC20 token to be transferred.
+     * @param from The address from which the tokens are to be transferred.
+     * @param amount The amount of the token to be transferred.
+     * @param feeOnTransfer A boolean indicating if the `token` includes a transfer fee.
+     * @return The actual amount of `token` transferred.
+     */
+    function _pullToken(IERC20 token, address from, uint256 amount, bool feeOnTransfer) internal returns (uint256) {
+        uint256 balanceBefore;
+        if (feeOnTransfer) {
+            balanceBefore = token.balanceOf(address(this));
+        }
+        token.safeTransferFrom(from, address(this), amount);
+        if (feeOnTransfer) {
+            return token.balanceOf(address(this)) - balanceBefore;
+        }
+        return amount;
+    }
+
+    /**
      * @notice Pulls the specified `amount` of `token` to this contract, approves the swap router to spend it, and
      * executes a swap.
      *
@@ -324,7 +348,6 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     function _processTokenSwap(IERC20 token, uint256 amount, bytes memory swapData) internal returns (uint256 result) {
         PearlRouterStorage storage $ = _getPearlRouterStorage();
         address router = $.swapRouter;
-        token.safeTransferFrom(msg.sender, address(this), amount);
         token.forceApprove(router, amount);
         result = abi.decode(router.functionCall(swapData), (uint256));
         token.forceApprove(router, 0);
