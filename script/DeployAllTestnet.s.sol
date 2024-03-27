@@ -10,15 +10,15 @@ contract DeployAll is DeployAllBase {
     }
 
     function _getSwapRouterAddress() internal pure override returns (address) {
-        return 0x0a42599e0840aa292C76620dC6d4DAfF23DB5236;
+        return 0xa752C9Cd89FE0F9D07c8dC79A7564b45F904b344;
     }
 
     function _getPearlFactoryAddress() internal pure override returns (address) {
-        return 0xDfCD83D2F29cF1E05F267927C102c0e3Dc2BD725;
+        return 0x579485AC5737c0A729908d5EA19D1054d275393F;
     }
 
     function _getQuoterAddress() internal pure override returns (address) {
-        return 0x6B6dA57BA5E77Ed5504Fe778449056fbb18020D5;
+        return 0x97Fdf90f153628b74aA9EB19BD617adB32987caF;
     }
 
     function _getGelatoMessageSender() internal pure override returns (address) {

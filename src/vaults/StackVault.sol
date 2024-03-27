@@ -679,12 +679,14 @@ contract StackVault is
 
         address account = msg.sender;
 
-        _subtractAmountFromCollateral(account, withdrawalAmount);
+        uint256 share = _subtractAmountFromCollateral(account, withdrawalAmount);
+        emit CollateralWithdrawn(account, address(this), withdrawalAmount, share);
 
         (uint256 swapAmountIn, uint256 swapAmountOut) =
             _safeSwap(collateralToken, borrowToken, withdrawalAmount, swapTarget, swapData);
 
-        _subtractAmountFromDebt(account, swapAmountOut);
+        share = _subtractAmountFromDebt(account, swapAmountOut);
+        emit Repaid(account, account, swapAmountOut, share);
 
         if (swapAmountIn < withdrawalAmount) {
             unchecked {
@@ -802,8 +804,11 @@ contract StackVault is
             }
         }
 
-        _subtractAmountFromDebt(account, repayAmount);
-        _subtractAmountFromCollateral(account, totalCollateralRemoved);
+        uint256 share = _subtractAmountFromDebt(account, repayAmount);
+        emit Repaid(msg.sender, account, repayAmount, share);
+
+        share = _subtractAmountFromCollateral(account, totalCollateralRemoved);
+        emit CollateralWithdrawn(account, address(this), totalCollateralRemoved, share);
 
         uint256 liquidationBonus = penaltyFeeAmount / 2;
         uint256 collectedFee = penaltyFeeAmount - liquidationBonus;
