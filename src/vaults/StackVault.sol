@@ -690,7 +690,9 @@ contract StackVault is
 
         if (swapAmountIn < withdrawalAmount) {
             unchecked {
-                _addAmountToCollateral(account, withdrawalAmount - swapAmountIn);
+                uint256 delta = withdrawalAmount - swapAmountIn;
+                share = _addAmountToCollateral(account, delta);
+                emit CollateralDeposited(address(this), account, delta, share);
             }
             collateralToken.forceApprove(swapTarget, 0);
         }
