@@ -257,7 +257,7 @@ abstract contract VaultFactoryConfiguration is
         }
         uint256 oldInterestRate = $.borrowInterestRate;
         uint256 newInterestRate =
-            oldInterestRate.adjustBorrowInterestRate(referencePrice, Constants.ORACLE_PRICE_PRECISION);
+            oldInterestRate.adjustBorrowInterestRate(referencePrice, Constants.INTEREST_RATE_PRECISION);
         if (oldInterestRate == newInterestRate) {
             revert ValueUnchanged();
         }
