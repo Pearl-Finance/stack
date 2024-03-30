@@ -82,6 +82,7 @@ contract StackVault is
     event VaultRetired();
     event VaultRevived();
 
+    event BorrowTokenOracleUpdated(address indexed oldOracle, address indexed newOracle);
     event CollateralTokenOracleUpdated(address indexed oldOracle, address indexed newOracle);
     event BorrowOpeningFeeUpdated(uint256 oldFee, uint256 newFee);
     event LiquidationPenaltyFeeUpdated(uint256 oldFee, uint256 newFee);
@@ -262,7 +263,7 @@ contract StackVault is
             revert ValueUnchanged();
         }
         $.borrowTokenOracle = newOracle;
-        emit CollateralTokenOracleUpdated(oldOracle, newOracle);
+        emit BorrowTokenOracleUpdated(oldOracle, newOracle);
     }
 
     /**
