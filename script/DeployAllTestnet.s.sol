@@ -9,6 +9,13 @@ contract DeployAll is DeployAllBase {
         return 0x83feDBc0B85c6e29B589aA6BdefB1Cc581935ECD;
     }
 
+    function _getUKREAddress() internal override returns (address) {
+        if (getChain("unreal").chainId == block.chainid) {
+            return 0x1804C32c5495643998B70C311AB461AE348a7FEe;
+        }
+        revert("DeployAll: UKRE address not set");
+    }
+
     function _getSwapRouterAddress() internal pure override returns (address) {
         return 0xa752C9Cd89FE0F9D07c8dC79A7564b45F904b344;
     }
@@ -63,15 +70,29 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: ETH oracle address not set");
     }
 
-    function _getTangibleRevenueDistributor() internal pure override returns (address) {
-        return 0x56843df02d5A230929B3A572ACEf5048d5dB76db;
-    }
-
     function _getMOREOracle() internal override returns (address) {
         if (getChain("unreal").chainId == block.chainid) {
-            return 0x3A76b37D3dEAB120bC46E3a542C67386D83f0BbA; // TODO: this is DAI
+            return 0x05357De52458f6dC968c7d5A5Dc75b3Cb0bEdd49;
         }
-        revert("DeployAll: MORE Oracle address not set");
+        revert("DeployAll: MORE oracle address not set");
+    }
+
+    function _getUKREOracle() internal override returns (address) {
+        if (getChain("unreal").chainId == block.chainid) {
+            return 0x84278F7Bac767453f46Ccb1CF71aF5414b9b6543;
+        }
+        revert("DeployAll: UKRE oracle address not set");
+    }
+
+    function _getUSTBOracle() internal override returns (address) {
+        if (getChain("unreal").chainId == block.chainid) {
+            return 0x83a6daA1d07178D26a19Ca0FE28e424A80349Be8;
+        }
+        revert("DeployAll: USTB oracle address not set");
+    }
+
+    function _getTangibleRevenueDistributor() internal pure override returns (address) {
+        return 0x56843df02d5A230929B3A572ACEf5048d5dB76db;
     }
 
     function _getDeploymentChainAliases() internal pure override returns (string[] memory aliases) {

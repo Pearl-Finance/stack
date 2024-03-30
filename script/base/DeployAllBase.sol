@@ -57,13 +57,17 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             }
             _deployInterestRateOracle("USTBInterestRateOracle", _getUSTBAddress(), 0.05e18);
             address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault, feeReceivers);
+
+            _deployOracleWrapper("DAIOracleWrapper", _getDAI(), _getDAIOracle());
+            _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), _getETHOracle());
+            _deployStaticOracle("StaticMOREOracle", address(more), 1e18);
+            _deployStaticOracle("StaticUSTBOracle", _getUSTBAddress(), 1e18);
+            _deployOracleWrapper("USTBOracleWrapper", _getUSTBAddress(), _getUSTBOracle());
+            _deployOracleWrapper("UKREOracleWrapper", _getUKREAddress(), _getUKREOracle());
+
             address moreOracleWrapper = _deployOracleWrapper("MOREOracleWrapper", address(more), _getMOREOracle());
             address moreOracle = _deployCappedOracle("CappedMOREOracle", moreOracleWrapper, 1e18);
-            _deployStaticOracle("StaticMOREOracle", address(more), 1e18);
-            if (_chain.chainId == getChain("unreal").chainId) {
-                _deployOracleWrapper("DAIOracleWrapper", _getDAI(), _getDAIOracle());
-                _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), _getETHOracle());
-            }
+
             address implementationDeployer = _deployVaultImplementationDeployer();
             address vaultDeployer = _deployVaultDeployer(vaultFactoryAddress, implementationDeployer);
             address vaultFactory = _deployVaultFactory(moreMinter, moreOracle, vaultDeployer, feeSplitter);
@@ -92,6 +96,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
     function _getUSTBAddress() internal pure virtual returns (address);
 
+    function _getUKREAddress() internal virtual returns (address);
+
     function _getSwapRouterAddress() internal pure virtual returns (address);
 
     function _getPearlFactoryAddress() internal pure virtual returns (address);
@@ -110,11 +116,15 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
     function _getTangibleRevenueDistributor() internal pure virtual returns (address);
 
-    function _getMOREOracle() internal virtual returns (address);
-
     function _getDAIOracle() internal virtual returns (address);
 
     function _getETHOracle() internal virtual returns (address);
+
+    function _getMOREOracle() internal virtual returns (address);
+
+    function _getUKREOracle() internal virtual returns (address);
+
+    function _getUSTBOracle() internal virtual returns (address);
 
     /**
      * @dev Virtual function to be overridden in derived contracts to provide an array of chain aliases where the MORE

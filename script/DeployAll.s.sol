@@ -9,6 +9,10 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: USTB address not set");
     }
 
+    function _getUKREAddress() internal override returns (address) {
+        revert("DeployAll: UKRE address not set");
+    }
+
     function _getSwapRouterAddress() internal pure override returns (address) {
         revert("DeployAll: Swap Router address not set");
     }
@@ -45,16 +49,24 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: Tangible Revenue Distributor address not set");
     }
 
-    function _getMOREOracle() internal virtual override returns (address) {
-        revert("DeployAll: MORE Oracle address not set");
-    }
-
     function _getDAIOracle() internal override returns (address) {
         revert("DeployAll: DAI oracle address not set");
     }
 
     function _getETHOracle() internal override returns (address) {
         revert("DeployAll: ETH oracle address not set");
+    }
+
+    function _getMOREOracle() internal virtual override returns (address) {
+        revert("DeployAll: MORE Oracle address not set");
+    }
+
+    function _getUKREOracle() internal virtual override returns (address) {
+        revert("DeployAll: UKRE Oracle address not set");
+    }
+
+    function _getUSTBOracle() internal virtual override returns (address) {
+        revert("DeployAll: USTB Oracle address not set");
     }
 
     function _getDeploymentChainAliases() internal pure override returns (string[] memory aliases) {
