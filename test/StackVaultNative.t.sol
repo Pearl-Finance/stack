@@ -89,7 +89,7 @@ contract StackVaultNativeTest is Test {
         assertEq(address(vault.borrowToken()), address(borrowToken));
         assertEq(vault.liquidationThreshold(), 80);
         assertEq(vault.borrowOpeningFee(), 0.005e18);
-        assertEq(vault.liquidationPenaltyFee(), 0.03e18);
+        assertEq(vault.liquidationPenaltyFee(), 0.1e18);
 
         uint256 interestRate = vault.interestRatePerSecond() * 365 days;
         uint256 trimmedInterestRate = interestRate / 1e13 * 1e13;

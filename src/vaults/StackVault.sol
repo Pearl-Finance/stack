@@ -53,7 +53,6 @@ contract StackVault is
     using SafeERC20 for BorrowToken;
 
     uint256 public constant DEFAULT_BORROW_OPENING_FEE = 0.005e18;
-    uint256 public constant DEFAULT_LIQUIDATION_PENALTY_FEE = 0.03e18;
     uint256 public constant DEFAULT_FLASHLOAN_FEE = 0.005e18;
 
     struct AccrualInfo {
@@ -217,8 +216,12 @@ contract StackVault is
         _updateLiquidationThreshold($, 0, _liquidationThreshold);
         _updateCollateralTokenOracle($, address(0), _collateralTokenOracle);
         _updateBorrowOpeningFee($, 0, DEFAULT_BORROW_OPENING_FEE);
-        _updateLiquidationPenaltyFee($, 0, DEFAULT_LIQUIDATION_PENALTY_FEE);
         _updateInterestRateMultiplier($, 0, _interestRateMultiplier);
+        _updateLiquidationPenaltyFee(
+            $,
+            0,
+            (Constants.LTV_PRECISION - _liquidationThreshold) * Constants.FEE_PRECISION / (2 * Constants.LTV_PRECISION)
+        );
     }
 
     /**
