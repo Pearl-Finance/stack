@@ -58,24 +58,31 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             _deployInterestRateOracle("USTBInterestRateOracle", _getUSTBAddress(), 0.05e18);
             address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault, feeReceivers);
 
-            _deployOracleWrapper("DAIOracleWrapper", _getDAI(), _getDAIOracle());
-            _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), _getETHOracle());
-            _deployStaticOracle("StaticMOREOracle", address(more), 1e18);
-            _deployStaticOracle("StaticUSTBOracle", _getUSTBAddress(), 1e18);
-            _deployOracleWrapper("USTBOracleWrapper", _getUSTBAddress(), _getUSTBOracle());
-            _deployOracleWrapper("UKREOracleWrapper", _getUKREAddress(), _getUKREOracle());
+            address moreOracle = _deployStaticOracle("StaticMOREOracle", address(more), 1e18);
 
-            address moreOracleWrapper = _deployOracleWrapper("MOREOracleWrapper", address(more), _getMOREOracle());
-            address moreOracle = _deployCappedOracle("CappedMOREOracle", moreOracleWrapper, 1e18);
+            if (_chain.chainId == getChain("unreal").chainId) {
+                // TODO: remove condition when oracles have been deployed on all chains
+                _deployStaticOracle("StaticUSTBOracle", _getUSTBAddress(), 1e18);
+                _deployOracleWrapper("DAIOracleWrapper", _getDAI(), _getDAIOracle());
+                _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), _getETHOracle());
+                _deployOracleWrapper("USTBOracleWrapper", _getUSTBAddress(), _getUSTBOracle());
+                _deployOracleWrapper("UKREOracleWrapper", _getUKREAddress(), _getUKREOracle());
+
+                address moreOracleWrapper = _deployOracleWrapper("MOREOracleWrapper", address(more), _getMOREOracle());
+                moreOracle = _deployCappedOracle("CappedMOREOracle", moreOracleWrapper, 1e18);
+            }
 
             address implementationDeployer = _deployVaultImplementationDeployer();
             address vaultDeployer = _deployVaultDeployer(vaultFactoryAddress, implementationDeployer);
             address vaultFactory = _deployVaultFactory(moreMinter, moreOracle, vaultDeployer, feeSplitter);
             address pearlRouter = _deployPearlRouter();
+
             assert(vaultFactoryAddress == vaultFactory);
+
             if (!VaultFactory(vaultFactory).isTrustedSwapTarget(pearlRouter)) {
                 VaultFactory(vaultFactory).setTrustedSwapTarget(pearlRouter, true);
             }
+
             for (uint256 j = 0; j < deploymentChainAliases.length; j++) {
                 if (i != j) {
                     if (

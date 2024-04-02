@@ -55,7 +55,7 @@ abstract contract DeploymentScriptBase is Script {
      * customization of the deployment process, as different salts lead to different deterministic addresses.
      */
     constructor(bytes memory _salt) {
-        _SALT = keccak256(bytes.concat(_salt, "-20240318"));
+        _SALT = keccak256(bytes.concat(_salt, "-20240402"));
     }
 
     /**
@@ -83,7 +83,7 @@ abstract contract DeploymentScriptBase is Script {
     function _setup() internal {
         _loadPrivateKey();
         setChain("unreal", ChainData("Unreal Chain", 18233, "https://rpc.unreal-orbit.gelato.digital"));
-        setChain("real", ChainData("Real Chain", 111188, "https://rpc.real.gelato.digital"));
+        setChain("real", ChainData("Real Chain", 111188, "https://real.rpc.org"));
     }
 
     /**
