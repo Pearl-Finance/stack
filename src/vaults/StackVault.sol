@@ -372,6 +372,9 @@ contract StackVault is
         accrueInterest();
         StackVaultStorage storage $ = _getStackVaultStorage();
         uint256 oldMultiplier = $.interestRateMultiplier;
+        if (oldMultiplier == _interestRateMultiplier) {
+            revert ValueUnchanged();
+        }
         _updateInterestRateMultiplier($, oldMultiplier, _interestRateMultiplier);
     }
 
