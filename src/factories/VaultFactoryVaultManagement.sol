@@ -109,6 +109,20 @@ abstract contract VaultFactoryVaultManagement is
     }
 
     /**
+     * @notice Sets a new liquidation threshold for a specific vault.
+     * @dev Updates the liquidation threshold for a given vault by invoking the `setLiquidationThreshold` method on
+     *      the StackVault contract.
+     *      The liquidation threshold is applied when a position in this vault undergoes liquidation.
+     *      Access to this function is restricted to the contract owner.
+     *      Reverts if the new threshold is identical to the current threshold to avoid unnecessary transactions.
+     * @param vault The address of the vault for which to set the new liquidation penalty fee.
+     * @param newThreshold The new liquidation threshold to be set.
+     */
+    function setLiquidationThreshold(address payable vault, uint8 newThreshold) public onlyOwner {
+        _requireVault(vault).setLiquidationThreshold(newThreshold);
+    }
+
+    /**
      * @notice Sets a new interest rate multiplier for a specific vault.
      * @dev Updates the interest rate multiplier of a given vault by calling the `setInterestRateMultiplier` function on
      *      the StackVault contract.

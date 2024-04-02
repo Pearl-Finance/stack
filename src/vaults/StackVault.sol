@@ -225,6 +225,29 @@ contract StackVault is
     }
 
     /**
+     * @notice Authorizes an upgrade to a new contract implementation.
+     * @dev Internal function to authorize upgrading the contract to a new implementation.
+     *      Overrides the UUPSUpgradeable `_authorizeUpgrade` function.
+     *      Restricted to the contract owner.
+     * @param newImplementation The address of the new contract implementation.
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    /**
+     * @notice Sets the liquidation threshold.
+     * @dev Updates the threshold at which positions can be liquidated. Only callable by the factory.
+     * @param newThreshold The new liquidation threshold.
+     */
+    function setLiquidationThreshold(uint8 newThreshold) public onlyFactory {
+        StackVaultStorage storage $ = _getStackVaultStorage();
+        uint8 oldThreshold = SafeCast.toUint8($.liquidationThreshold);
+        if (oldThreshold == newThreshold) {
+            revert ValueUnchanged();
+        }
+        _updateLiquidationThreshold($, oldThreshold, newThreshold);
+    }
+
+    /**
      * @dev Internal function to update the liquidation threshold in the StackVaultStorage.
      * Validates the new threshold against system constraints, updates the storage, and emits a
      * `LiquidationThresholdUpdated` event. This function is expected to be called by public or external setter
@@ -236,22 +259,20 @@ contract StackVault is
     function _updateLiquidationThreshold(StackVaultStorage storage $, uint8 oldThreshold, uint8 newThreshold)
         internal
     {
+        uint8 maxLiquidationThreshold = SafeCast.toUint8(Constants.LTV_PRECISION * 99 / 100); // 99%
         uint8 minLiquidationThreshold = SafeCast.toUint8(Constants.LTV_PRECISION / 100); // 1%
-        if (newThreshold < minLiquidationThreshold || newThreshold > Constants.LTV_PRECISION) {
-            revert InvalidLiquidationThreshold(1, SafeCast.toUint8(Constants.LTV_PRECISION), newThreshold);
+        if (newThreshold < minLiquidationThreshold || newThreshold > maxLiquidationThreshold) {
+            revert InvalidLiquidationThreshold(minLiquidationThreshold, maxLiquidationThreshold, newThreshold);
+        }
+        if (newThreshold < oldThreshold) {
+            if ($.totalBorrowAmount.total != 0) {
+                // prevent liquidation of existing positions
+                revert InvalidLiquidationThreshold(oldThreshold, maxLiquidationThreshold, newThreshold);
+            }
         }
         $.liquidationThreshold = newThreshold;
         emit LiquidationThresholdUpdated(oldThreshold, newThreshold);
     }
-
-    /**
-     * @notice Authorizes an upgrade to a new contract implementation.
-     * @dev Internal function to authorize upgrading the contract to a new implementation.
-     *      Overrides the UUPSUpgradeable `_authorizeUpgrade` function.
-     *      Restricted to the contract owner.
-     * @param newImplementation The address of the new contract implementation.
-     */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
      * @notice Sets the oracle address for the borrow token. This overrides the default oracle set in the factory. If
