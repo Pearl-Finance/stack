@@ -37,7 +37,7 @@ contract DeployAll is DeployAllBase {
     }
 
     function _getAMO() internal pure override returns (address) {
-        return 0x6B49086e1488Ad1f6a38332b167d3e9E45276493;
+        return 0xbf927b707E962B9b8C4a19AC9aCb75b24fABFeBA;
     }
 
     function _getDAI() internal override returns (address) {
