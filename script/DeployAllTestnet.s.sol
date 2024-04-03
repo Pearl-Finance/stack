@@ -37,7 +37,7 @@ contract DeployAll is DeployAllBase {
     }
 
     function _getAMO() internal pure override returns (address) {
-        return 0x839AEeA3537989ce05EA1b218aB0F25E54cC3B3f;
+        return 0x6B49086e1488Ad1f6a38332b167d3e9E45276493;
     }
 
     function _getDAI() internal override returns (address) {
@@ -92,7 +92,7 @@ contract DeployAll is DeployAllBase {
     }
 
     function _getTangibleRevenueDistributor() internal pure override returns (address) {
-        return 0x56843df02d5A230929B3A572ACEf5048d5dB76db;
+        return 0x48027bfdc9923642F44aa5c199C7eF9f07B3d5D2;
     }
 
     function _getDeploymentChainAliases() internal pure override returns (string[] memory aliases) {
