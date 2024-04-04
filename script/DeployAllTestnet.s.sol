@@ -11,7 +11,7 @@ contract DeployAll is DeployAllBase {
 
     function _getUKREAddress() internal override returns (address) {
         if (getChain("unreal").chainId == block.chainid) {
-            return 0x1804C32c5495643998B70C311AB461AE348a7FEe;
+            return 0x2B8640bb46bc882bBbDE8c48D4D4503971c8DFc2;
         }
         revert("DeployAll: UKRE address not set");
     }
@@ -37,7 +37,7 @@ contract DeployAll is DeployAllBase {
     }
 
     function _getAMO() internal pure override returns (address) {
-        return 0xbf927b707E962B9b8C4a19AC9aCb75b24fABFeBA;
+        return 0x839AEeA3537989ce05EA1b218aB0F25E54cC3B3f;
     }
 
     function _getDAI() internal override returns (address) {

@@ -55,7 +55,7 @@ abstract contract DeploymentScriptBase is Script {
      * customization of the deployment process, as different salts lead to different deterministic addresses.
      */
     constructor(bytes memory _salt) {
-        _SALT = keccak256(bytes.concat(_salt, "-20240402"));
+        _SALT = keccak256(bytes.concat(_salt, "-20240404"));
     }
 
     /**

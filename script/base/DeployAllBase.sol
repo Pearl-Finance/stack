@@ -39,6 +39,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             vm.createSelectFork(deploymentChainAliases[i]);
             vm.startBroadcast(_pk);
             address moreAddress = _deployMore();
+            require(moreAddress < _getUSTBAddress(), "Invalid MORE address (use a different salt)");
             address moreStakingVault = _deployMoreStakingVault(moreAddress, _chain.name, _chain.chainAlias);
             More more = More(moreAddress);
             (address vaultFactoryAddress,) = _computeProxyAddress("VaultFactory");
