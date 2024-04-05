@@ -57,6 +57,9 @@ abstract contract DeployAllBase is PearlDeploymentScript {
                 feeReceivers[0] = _getGelatoMessageSender();
             }
             _deployInterestRateOracle("USTBInterestRateOracle", _getUSTBAddress(), 0.05e18);
+            if (_chain.chainId == getChain("unreal").chainId) {
+                _deployInterestRateOracle("DAIInterestRateOracle", _getDAI(), 0);
+            }
             address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault, feeReceivers);
 
             address moreOracle = _deployStaticOracle("StaticMOREOracle", address(more), 1e18);
