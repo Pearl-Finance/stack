@@ -231,9 +231,9 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             minter.setVaultFactory(vaultFactoryAddress);
         }
 
-        if (minter.amo() != amo) {
-            minter.setAMO(amo);
-        }
+        // if (minter.amo() != amo) {
+        //     minter.setAMO(amo);
+        // }
     }
 
     function _deployFeeSplitter(address token, address moreStakingVaultAddress, address[] memory feeReceivers)
@@ -587,8 +587,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             return 111;
         } else if (chain == keccak256("base")) {
             return 184;
-            //} else if (chain == keccak256("real")) {
-            //    return 0;
+        } else if (chain == keccak256("real")) {
+            return 237;
         } else if (chain == keccak256("goerli")) {
             return 10121;
         } else if (chain == keccak256("sepolia")) {
@@ -627,8 +627,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             lzEndpoint = 0x3c2269811836af69497E5F486A85D7316753cf62;
         } else if (chainId == getChain("base").chainId) {
             lzEndpoint = 0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7;
-            //} else if (chainId == getChain("real").chainId) {
-            //    lzEndpoint = address(0);
+        } else if (chainId == getChain("real").chainId) {
+            lzEndpoint = 0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7;
         } else if (chainId == getChain("goerli").chainId) {
             lzEndpoint = 0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23;
         } else if (chainId == getChain("sepolia").chainId) {

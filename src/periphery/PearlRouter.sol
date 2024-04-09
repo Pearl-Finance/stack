@@ -5,6 +5,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -12,6 +13,7 @@ import {CommonErrors} from "../interfaces/CommonErrors.sol";
 
 import {IQuoter} from "./interfaces/IQuoter.sol";
 import {IRouter} from "./interfaces/IRouter.sol";
+import {ITokenConverter} from "./interfaces/ITokenConverter.sol";
 
 /**
  * @title Pearl Router Contract
@@ -24,17 +26,22 @@ import {IRouter} from "./interfaces/IRouter.sol";
  *      Inherits from OwnableUpgradeable and UUPSUpgradeable for ownership management and upgrade functionality.
  * @author SeaZarrgh LaBuoy
  */
-contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
+contract PearlRouter is MulticallUpgradeable, OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     using Address for address;
     using SafeERC20 for IERC20;
 
-    event SwapRouterUpdated(address indexed oldSwapRouter, address indexed newSwapRouter);
+    error InsufficientOutputAmount();
+    error InvalidPath();
+
     event QuoterUpdated(address indexed oldQuoter, address indexed newQuoter);
+    event SwapRouterUpdated(address indexed oldSwapRouter, address indexed newSwapRouter);
+    event TokenConverterUpdated(address indexed token, address indexed converter);
 
     /// @custom:storage-location erc7201:pearl.storage.PearlRouter
     struct PearlRouterStorage {
         address swapRouter;
         address quoter;
+        mapping(address token => address) tokenConverter;
     }
 
     // keccak256(abi.encode(uint256(keccak256("pearl.storage.PearlRouter")) - 1)) & ~bytes32(uint256(0xff))
@@ -142,20 +149,33 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     }
 
     /**
-     * @notice Executes a token swap through the Uniswap V3 router, optionally accounting for tokens with transfer fees.
-     * @dev Swaps a specified amount of one token for another. Requires the `tokenIn` to be approved for transfer.
-     *      The function includes a `feeOnTransfer` parameter to accommodate tokens that deduct fees on transfer,
-     *      affecting the swap's input amount. When `feeOnTransfer` is true, the function accounts for the input token's
-     *      transfer fee, potentially altering the effective swap amount.
-     *      The operation is executed via the Uniswap V3 router using the stored router address.
-     *
+     * @notice Associates a token with a converter contract.
+     * @dev Stores a mapping between a token and its corresponding converter contract. The converter is used to
+     *      facilitate token conversions that are not natively supported by the swap functionality. This enables
+     *      the router to support a wider range of tokens by converting them to an intermediate token that is
+     *      supported before proceeding with the swap. Only callable by the contract owner.
+     * @param token The address of the token to associate with a converter.
+     * @param converter The address of the converter contract.
+     */
+    function setTokenConverter(address token, address converter) external onlyOwner {
+        PearlRouterStorage storage $ = _getPearlRouterStorage();
+        $.tokenConverter[token] = converter;
+        emit TokenConverterUpdated(token, converter);
+    }
+
+    /**
+     * @notice Executes a token swap through the Uniswap V3 router, with optional support for fee-on-transfer tokens.
+     * @dev Performs a token swap from `tokenIn` to `tokenOut` through the configured Uniswap V3 router. This
+     *      function can accommodate tokens that have a transfer fee. If `feeOnTransfer` is true, it adjusts the
+     *      swap logic to account for the fee taken during transfer, ensuring the correct amount of tokens is swapped.
+     *      Requires the sender to have approved this contract to spend at least `amountIn` of `tokenIn`.
      * @param tokenIn The address of the input token.
      * @param tokenOut The address of the output token.
-     * @param amountIn The amount of the input token to swap.
-     * @param minAmountOut The minimum amount of the output token to receive, accounting for slippage.
-     * @param fee The pool fee tier for the swap.
-     * @param feeOnTransfer A boolean indicating if the `tokenIn` includes a transfer fee.
-     * @return The amount of the output token received, which may vary based on `feeOnTransfer` calculations.
+     * @param amountIn The amount of `tokenIn` to swap.
+     * @param minAmountOut The minimum amount of `tokenOut` to receive, to mitigate slippage.
+     * @param fee The fee tier of the Uniswap V3 pool to be used for the swap.
+     * @param feeOnTransfer Specifies whether `tokenIn` implements a transfer fee.
+     * @return The amount of `tokenOut` received from the swap.
      */
     function swap(
         address tokenIn,
@@ -207,16 +227,64 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     {
         address tokenIn = _firstAddressInPath(path);
         amountIn = _pullToken(IERC20(tokenIn), msg.sender, amountIn, feeOnTransfer);
-        IRouter.ExactInputParams memory params = IRouter.ExactInputParams({
-            path: path,
-            recipient: msg.sender,
-            deadline: block.timestamp,
-            amountIn: amountIn,
-            amountOutMinimum: minAmountOut
-        });
+        return _swap(path, amountIn, minAmountOut, feeOnTransfer, msg.sender);
+    }
 
-        bytes4 selector = feeOnTransfer ? IRouter.exactInputFeeOnTransfer.selector : IRouter.exactInput.selector;
-        return _processTokenSwap(IERC20(tokenIn), amountIn, abi.encodeWithSelector(selector, (params)));
+    /**
+     * @notice Executes a token swap from `tokenIn` to `tokenOut` through a specified path, with support for initial and
+     *         final token conversions.
+     *
+     * @dev This function enables swapping tokens that are not directly supported in the specified swap path by
+     *      converting `tokenIn` to the first token in the `path` and/or the last token in the `path` to `tokenOut`, if
+     *      necessary. It supports fee-on-transfer tokens by accounting for potential fees during the initial token pull
+     *      and the final token conversion.
+     *      The swap is executed through a specified path of intermediate tokens, potentially involving multiple Uniswap
+     *      V3 pools. This function is designed to handle complex swap scenarios where direct paths are not available or
+     *      optimal, allowing for greater flexibility in token swapping strategies.
+     *      The caller must approve this contract to spend `tokenIn`, and the contract must have sufficient allowance to
+     *      spend intermediate tokens on the caller's behalf.
+     *
+     * @param tokenIn The address of the input token to be swapped.
+     * @param tokenOut The address of the output token to be received.
+     * @param path The encoded path of intermediate tokens to swap through, not necessarily starting with `tokenIn` or
+     *             ending with `tokenOut`.
+     * @param amountIn The amount of `tokenIn` to be swapped.
+     * @param minAmountOut The minimum amount of `tokenOut` to be received from the swap, accounting for slippage. This
+     *                     parameter is enforced at the end of the swap execution.
+     * @param feeOnTransfer Indicates whether `tokenIn` or any tokens involved in the swap are fee-on-transfer tokens.
+     *                      This affects how the `amountIn` is calculated and potentially reduces the amount received
+     *                      due to transfer fees.
+     * @return amountOut The actual amount of `tokenOut` received from the swap, which may be less than `minAmountOut`
+     *                   if market conditions change unfavorably.
+     */
+    function swap(
+        address tokenIn,
+        address tokenOut,
+        bytes memory path,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        bool feeOnTransfer
+    ) external returns (uint256 amountOut) {
+        PearlRouterStorage storage $ = _getPearlRouterStorage();
+        address pathTokenIn = _firstAddressInPath(path);
+
+        amountIn = _pullToken(IERC20(tokenIn), msg.sender, amountIn, feeOnTransfer);
+
+        if (tokenIn != pathTokenIn) {
+            amountIn = _convertToken($, tokenIn, pathTokenIn, amountIn, address(this));
+        }
+
+        address pathTokenOut = _lastAddressInPath(path);
+
+        if (tokenOut != pathTokenOut) {
+            amountOut = _swap(path, amountIn, 0, feeOnTransfer, address(this));
+            amountOut = _convertToken($, pathTokenOut, tokenOut, amountOut, msg.sender);
+            if (amountOut < minAmountOut) {
+                revert InsufficientOutputAmount();
+            }
+        } else {
+            amountOut = _swap(path, amountIn, minAmountOut, feeOnTransfer, msg.sender);
+        }
     }
 
     /**
@@ -310,9 +378,55 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
     }
 
     /**
+     * @notice Retrieves the address of the last token in a given path.
+     * @param path The path of tokens to swap through.
+     * @return lastAddress The address of the last token in the path.
+     */
+    function _lastAddressInPath(bytes memory path) internal pure returns (address lastAddress) {
+        require(path.length >= 20, "OB");
+        assembly {
+            lastAddress := shr(96, mload(add(add(path, mload(path)), 12)))
+        }
+    }
+
+    /**
+     * @notice Converts an amount of `tokenIn` to `tokenOut` using a predefined converter contract.
+     * @dev Calls a token converter contract to convert `tokenIn` to `tokenOut`. This function is utilized for swaps
+     *      requiring conversions outside the main swap path, e.g., when `tokenIn` or `tokenOut` is not supported by
+     *      the primary swap mechanism. It facilitates the use of custom conversion logic, potentially involving
+     *      different protocols or swap mechanisms.
+     *      Requires that a converter contract address for `tokenIn` is already set and that the converter contract
+     *      can perform the conversion to `tokenOut`.
+     * @param $ A reference to the contract's storage space used to access converter addresses.
+     * @param tokenIn The address of the token to convert from.
+     * @param tokenOut The address of the token to convert to.
+     * @param amountIn The amount of `tokenIn` to convert.
+     * @param recipient The address to receive `tokenOut`.
+     * @return The amount of `tokenOut` received after conversion.
+     */
+    function _convertToken(
+        PearlRouterStorage storage $,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        address recipient
+    ) internal returns (uint256) {
+        address converter = $.tokenConverter[tokenIn];
+        if (converter == address(0)) {
+            revert InvalidPath();
+        }
+        return abi.decode(
+            Address.functionDelegateCall(
+                converter, abi.encodeCall(ITokenConverter.convert, (tokenIn, tokenOut, amountIn, recipient))
+            ),
+            (uint256)
+        );
+    }
+
+    /**
      * @notice Transfers the specified `amount` of `token` from `from` to this contract.
      * @dev This internal function transfers the specified `amount` of `token` from `from` to this contract and returns
-     * the actual amount transferred.
+     *      the actual amount transferred.
      * @param token The ERC20 token to be transferred.
      * @param from The address from which the tokens are to be transferred.
      * @param amount The amount of the token to be transferred.
@@ -333,12 +447,12 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
 
     /**
      * @notice Pulls the specified `amount` of `token` to this contract, approves the swap router to spend it, and
-     * executes a swap.
+     *         executes a swap.
      *
      * @dev This internal function handles the transfer of tokens into the contract, sets the allowance for the swap
-     * router, and performs the token swap by calling the router with the provided `swapData`. It ensures the allowance
-     * is reset after the swap. This function abstracts the token transfer, approval, and swap execution steps to
-     * simplify swap operations.
+     *      router, and performs the token swap by calling the router with the provided `swapData`. It ensures the
+     *      allowance is reset after the swap. This function abstracts the token transfer, approval, and swap execution
+     *      steps to simplify swap operations.
      *
      * @param token The ERC20 token to be swapped.
      * @param amount The amount of the token to be swapped.
@@ -351,5 +465,38 @@ contract PearlRouter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors {
         token.forceApprove(router, amount);
         result = abi.decode(router.functionCall(swapData), (uint256));
         token.forceApprove(router, 0);
+    }
+
+    /**
+     * @notice Executes a swap operation through Uniswap V3 according to the specified path, amount, and recipient.
+     * @dev This internal function performs a token swap operation via Uniswap V3, using the encoded `path` to dictate
+     *      the swap route. It can accommodate single or multi-hop swaps and is capable of handling fee-on-transfer
+     *      tokens if `feeOnTransfer` is true. This function is a lower-level utility used by public-facing swap
+     *      functions to execute the actual swap logic.
+     *      It ensures that the swap meets the specified `amountIn` and `minAmountOut` criteria, adjusting for
+     *      fee-on-transfer tokens as necessary. The function delegates call to the Uniswap V3 router with the
+     *      appropriate swap function based on the `feeOnTransfer` flag.
+     * @param path The encoded swap path that specifies each token and fee tier to be used in the swap.
+     * @param amountIn The amount of the input token to be swapped.
+     * @param minAmountOut The minimum amount of the output token that must be received for the swap to succeed.
+     * @param feeOnTransfer Indicates if the swap should account for tokens that deduct fees on transfer.
+     * @param recipient The address that will receive the output token.
+     * @return The amount of the output token received from the swap.
+     */
+    function _swap(bytes memory path, uint256 amountIn, uint256 minAmountOut, bool feeOnTransfer, address recipient)
+        internal
+        returns (uint256)
+    {
+        address tokenIn = _firstAddressInPath(path);
+        IRouter.ExactInputParams memory params = IRouter.ExactInputParams({
+            path: path,
+            recipient: recipient,
+            deadline: block.timestamp,
+            amountIn: amountIn,
+            amountOutMinimum: minAmountOut
+        });
+
+        bytes4 selector = feeOnTransfer ? IRouter.exactInputFeeOnTransfer.selector : IRouter.exactInput.selector;
+        return _processTokenSwap(IERC20(tokenIn), amountIn, abi.encodeWithSelector(selector, (params)));
     }
 }
