@@ -111,6 +111,16 @@ contract PearlRouter is MulticallUpgradeable, OwnableUpgradeable, UUPSUpgradeabl
     }
 
     /**
+     * @notice Retrieves the address of the converter contract associated with a token.
+     * @dev Returns the address of the converter contract associated with the specified token from the
+     *      PearlRouterStorage.
+     * @param token The address of the token to retrieve the converter for.
+     */
+    function getTokenConverter(address token) external view returns (address) {
+        return _getPearlRouterStorage().tokenConverter[token];
+    }
+
+    /**
      * @notice Sets a new address for the swap router.
      * @dev Updates the address of the swap router in the PearlRouterStorage.
      *      Access restricted to the contract owner.

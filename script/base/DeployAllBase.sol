@@ -24,6 +24,7 @@ import {AggregatorV3Wrapper} from "../../src/oracles/AggregatorV3Wrapper.sol";
 import {PearlRouter} from "../../src/periphery/PearlRouter.sol";
 import {PearlRouteFinder} from "../../src/periphery/PearlRouteFinder.sol";
 import {ERC4626Router} from "../../src/periphery/ERC4626Router.sol";
+import {DJUSDTokenConverter} from "../../src/periphery/converters/DJUSDTokenConverter.sol";
 
 abstract contract DeployAllBase is PearlDeploymentScript {
     function run() public {
@@ -108,6 +109,10 @@ abstract contract DeployAllBase is PearlDeploymentScript {
     function _getUSTBAddress() internal pure virtual returns (address);
 
     function _getUKREAddress() internal virtual returns (address);
+
+    function _getDJUSDAddress() internal virtual returns (address);
+
+    function _getDJPTAddress() internal virtual returns (address);
 
     function _getSwapRouterAddress() internal pure virtual returns (address);
 
@@ -521,6 +526,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         }
 
         _deployPearlRouteFinder(pearlRouterProxy);
+        _deployTokenConverters(pearlRouter);
     }
 
     function _deployPearlRouteFinder(address router) private returns (address pearlRouteFinderAddress) {
@@ -541,6 +547,35 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         }
 
         _saveDeploymentAddress("PearlRouteFinder", address(pearlRouteFinder));
+    }
+
+    function _deployTokenConverters(PearlRouter router) private {
+        address djusdTokenConverter = _deployDJUSDTokenConverter();
+        address djusd = _getDJUSDAddress();
+        address djpt = _getDJPTAddress();
+        router.setTokenConverter(djusd, djusdTokenConverter);
+        router.setTokenConverter(djpt, djusdTokenConverter);
+    }
+
+    function _deployDJUSDTokenConverter() private returns (address djusdTokenConverterAddress) {
+        address djusd = _getDJUSDAddress();
+        address djpt = _getDJPTAddress();
+        bytes memory bytecode = abi.encodePacked(type(DJUSDTokenConverter).creationCode, abi.encode(djusd, djpt));
+
+        djusdTokenConverterAddress = vm.computeCreate2Address(_SALT, keccak256(bytecode));
+
+        DJUSDTokenConverter djusdTokenConverter;
+
+        if (_isDeployed(djusdTokenConverterAddress)) {
+            console.log("DJUSD Token Converter is already deployed to %s", djusdTokenConverterAddress);
+            djusdTokenConverter = DJUSDTokenConverter(djusdTokenConverterAddress);
+        } else {
+            djusdTokenConverter = new DJUSDTokenConverter{salt: _SALT}(djusd, djpt);
+            assert(djusdTokenConverterAddress == address(djusdTokenConverter));
+            console.log("DJUSD Token Converter deployed to %s", djusdTokenConverterAddress);
+        }
+
+        _saveDeploymentAddress("DJUSDTokenConverter", address(djusdTokenConverter));
     }
 
     function _deployERC4626Router() private returns (address erc4626RouterAddress) {
