@@ -63,6 +63,13 @@ contract StackVault is
         uint256 feesEarned;
     }
 
+    event BadDebtPositionClosed(
+        address indexed liquidator,
+        address indexed account,
+        uint256 collateralSeized,
+        uint256 penaltyFee,
+        uint256 liquidationBonus
+    );
     event CollateralDeposited(address indexed from, address indexed to, uint256 amount, uint256 share);
     event CollateralWithdrawn(address indexed from, address indexed to, uint256 amount, uint256 share);
     event Borrowed(address indexed borrower, address indexed to, uint256 amount, uint256 share);
@@ -93,6 +100,7 @@ contract StackVault is
     error InvalidLiquidationThreshold(uint8 min, uint8 max, uint8 actual);
     error LeverageFlashloanFailed();
     error LiquidationFailed(address liquidator, address account);
+    error NoBadDebt(address account);
     error RebaseDetected();
     error Unhealthy();
     error UntrustedSwapTarget(address target);
@@ -886,6 +894,95 @@ contract StackVault is
         _transferCollateralOut(to, totalCollateralRemoved - collectedFee);
 
         emit Liquidated(msg.sender, account, totalCollateralRemoved, penaltyFeeAmount, repayAmount);
+    }
+
+    /**
+     * @notice Closes a position with bad debt, repaying the outstanding borrow amount and seizing collateral.
+     * @dev This function is designed to handle positions where the borrower's debt exceeds their collateral value,
+     *      indicating a position with bad debt. It is a public function, allowing anyone to close such positions.
+     *      A liquidation bonus is provided as an incentive for closing bad debt positions, encouraging community-driven
+     *      oversight.
+     *
+     *      The function follows these steps:
+     *      1. Accrue any outstanding interest to ensure accurate calculations of borrow and collateral amounts.
+     *      2. Retrieve the collateral amount, collateral value, borrow amount, and borrow value for the specified
+     *         account.
+     *      3. Check if the collateral value is less than the borrow value (indicating bad debt). If not, revert with
+     *         `NoBadDebt` error.
+     *      4. Calculate the penalty fee based on the borrow amount and the liquidation penalty fee. This fee represents
+     *         the cost of closing a bad debt position.
+     *      5. Subtract the borrower's borrow share and collateral share by the borrow amount and collateral amount,
+     *         respectively.
+     *      6. Split the penalty fee into two parts: a liquidation bonus and a collected fee. The collected fee is
+     *         transferred to the factory to cover fees, while the liquidation bonus is given to the caller.
+     *      7. Transfer the liquidation bonus to the specified address (incentivizing the closure of bad debt
+     *         positions).
+     *      8. Update the total collateral amount by adding the collateral amount minus the penalty fee to reflect
+     *         collateral that doesn't leave the vault.
+     *      9. Socialize the loss by adding the borrow amount back to the total borrow amount to maintain system
+     *         stability.
+     *     10. Emit the `BadDebtPositionClosed` event to track the operation and provide detailed information.
+     *
+     * @param account The address of the account with the bad debt position.
+     * @param to The address to receive the liquidation bonus (as an incentive for closing bad debt).
+     * @custom:error NoBadDebt If the collateral value is greater than or equal to the borrow value.
+     * @custom:error ReentrancyGuardReentrantCall If reentrancy is detected during execution.
+     * @custom:event BadDebtPositionClosed Indicates that a bad debt position was closed, with details about the
+     * operation.
+     */
+    function closeBadDebtPosition(address account, address to) external nonReentrant {
+        accrueInterest();
+
+        StackVaultStorage storage $ = _getStackVaultStorage();
+
+        uint256 collateralAmount;
+        uint256 collateralValue;
+        uint256 borrowAmount;
+        uint256 borrowValue;
+
+        (collateralAmount, collateralValue, borrowAmount, borrowValue) = _userPositionInfo(account);
+
+        if (collateralValue > borrowValue) {
+            revert NoBadDebt(account);
+        }
+
+        address _borrowTokenOracle = borrowTokenOracle();
+        address _collateralTokenOracle = $.collateralTokenOracle;
+
+        uint256 penaltyFeeAmount = _convertTokenAmount(
+            borrowAmount.calculateFeeAmount($.liquidationPenaltyFee),
+            _borrowTokenOracle,
+            _collateralTokenOracle,
+            Math.Rounding.Floor
+        );
+
+        uint256 share = _subtractAmountFromDebt(account, borrowAmount);
+        emit Repaid(address(this), account, borrowAmount, share);
+
+        share = _subtractAmountFromCollateral(account, collateralAmount);
+        emit CollateralWithdrawn(account, address(this), collateralAmount, share);
+
+        uint256 liquidationBonus = penaltyFeeAmount / 2;
+        uint256 collectedFee = penaltyFeeAmount - liquidationBonus;
+
+        collateralToken.forceApprove(address(_factory), collectedFee);
+        _factory.collectFees(address(collateralToken), collectedFee);
+
+        _transferCollateralOut(to, liquidationBonus);
+
+        emit Liquidated(msg.sender, account, collateralAmount, penaltyFeeAmount, borrowAmount);
+
+        // add collateral amount minus the penalty fee back to total as this amount won't leave the vault
+        unchecked {
+            $.totalCollateralAmount.total += collateralAmount - penaltyFeeAmount;
+        }
+
+        // sozialize the loss
+        InterestAccruingAmount memory totalBorrow = $.totalBorrowAmount;
+        totalBorrow.total += borrowAmount;
+        $.totalBorrowAmount = totalBorrow;
+
+        emit BadDebtPositionClosed(msg.sender, account, collateralAmount, penaltyFeeAmount, liquidationBonus);
     }
 
     /**
