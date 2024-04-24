@@ -31,16 +31,15 @@ abstract contract VaultFactoryConfiguration is
     using BorrowInterestRateAdjustmentMath for uint256;
     using SafeCast for uint256;
 
-    event BorrowTokenOracleChanged(address indexed oldOracle, address indexed newOracle);
-    event BorrowInterestRateChanged(uint256 oldInterestRate, uint256 newInterestRate);
-    event DebtCollectorChanged(address indexed oldDebtCollector, address indexed newDebtCollector);
-    event FeeReceiverChanged(address indexed oldFeeReceiver, address indexed newFeeReceiver);
-    event InterestRateManagerChanged(address indexed oldManager, address indexed newManager);
-    event PenaltyReceiverChanged(address indexed oldPenaltyReceiver, address indexed newPenaltyReceiver);
-    event SwapTargetTrustChanged(address indexed target, bool oldTrust, bool newTrust);
-    event VaultDeployerChanged(address indexed oldVaultDeployer, address indexed newVaultDeployer);
-    event LiquidationPenaltyFeeChanged(uint256 oldFee, uint256 newFee);
-    event LiquidatorPenaltyShareChanged(uint96 oldShare, uint96 newShare);
+    event BorrowTokenOracleUpdated(address indexed oldOracle, address indexed newOracle);
+    event BorrowInterestRateUpdated(uint256 oldInterestRate, uint256 newInterestRate);
+    event DebtCollectorUpdated(address indexed oldDebtCollector, address indexed newDebtCollector);
+    event FeeReceiverUpdated(address indexed oldFeeReceiver, address indexed newFeeReceiver);
+    event InterestRateManagerUpdated(address indexed oldManager, address indexed newManager);
+    event PenaltyReceiverUpdated(address indexed oldPenaltyReceiver, address indexed newPenaltyReceiver);
+    event SwapTargetTrustUpdated(address indexed target, bool oldTrust, bool newTrust);
+    event VaultDeployerUpdated(address indexed oldVaultDeployer, address indexed newVaultDeployer);
+    event LiquidatorPenaltyShareUpdated(uint96 oldShare, uint96 newShare);
 
     constructor(address _borrowTokenMinter) VaultFactoryERC7201(_borrowTokenMinter) {}
 
@@ -184,7 +183,7 @@ abstract contract VaultFactoryConfiguration is
             revert InvalidZeroAddress();
         }
         $.borrowTokenOracle = newOracle;
-        emit BorrowTokenOracleChanged(oldOracle, newOracle);
+        emit BorrowTokenOracleUpdated(oldOracle, newOracle);
     }
 
     /**
@@ -217,7 +216,7 @@ abstract contract VaultFactoryConfiguration is
         internal
     {
         $.interestRateManager = newManager;
-        emit InterestRateManagerChanged(oldManager, newManager);
+        emit InterestRateManagerUpdated(oldManager, newManager);
     }
 
     /**
@@ -236,7 +235,7 @@ abstract contract VaultFactoryConfiguration is
             revert ValueUnchanged();
         }
         $.trustedSwapTargets[target] = trusted;
-        emit SwapTargetTrustChanged(target, wasTrusted, trusted);
+        emit SwapTargetTrustUpdated(target, wasTrusted, trusted);
     }
 
     /**
@@ -262,7 +261,7 @@ abstract contract VaultFactoryConfiguration is
             revert ValueUnchanged();
         }
         $.borrowInterestRate = SafeCast.toUint96(newInterestRate);
-        emit BorrowInterestRateChanged(oldInterestRate, newInterestRate);
+        emit BorrowInterestRateUpdated(oldInterestRate, newInterestRate);
     }
 
     /**
@@ -282,7 +281,7 @@ abstract contract VaultFactoryConfiguration is
             revert ValueUnchanged();
         }
         $.borrowInterestRate = SafeCast.toUint96(newInterestRate);
-        emit BorrowInterestRateChanged(oldInterestRate, newInterestRate);
+        emit BorrowInterestRateUpdated(oldInterestRate, newInterestRate);
     }
 
     /**
@@ -316,7 +315,7 @@ abstract contract VaultFactoryConfiguration is
         internal
     {
         $.debtCollector = newDebtCollector;
-        emit DebtCollectorChanged(oldDebtCollector, newDebtCollector);
+        emit DebtCollectorUpdated(oldDebtCollector, newDebtCollector);
     }
 
     /**
@@ -353,7 +352,7 @@ abstract contract VaultFactoryConfiguration is
             revert InvalidZeroAddress();
         }
         $.feeReceiver = newFeeReceiver;
-        emit FeeReceiverChanged(oldFeeReceiver, newFeeReceiver);
+        emit FeeReceiverUpdated(oldFeeReceiver, newFeeReceiver);
     }
 
     /**
@@ -393,7 +392,7 @@ abstract contract VaultFactoryConfiguration is
             revert InvalidZeroAddress();
         }
         $.penaltyReceiver = newPenaltyReceiver;
-        emit PenaltyReceiverChanged(oldPenaltyReceiver, newPenaltyReceiver);
+        emit PenaltyReceiverUpdated(oldPenaltyReceiver, newPenaltyReceiver);
     }
 
     /**
@@ -429,7 +428,7 @@ abstract contract VaultFactoryConfiguration is
             revert InvalidShare(0, Constants.FEE_PRECISION, newShare);
         }
         $.liquidatorPenaltyShare = newShare;
-        emit LiquidatorPenaltyShareChanged(oldShare, newShare);
+        emit LiquidatorPenaltyShareUpdated(oldShare, newShare);
     }
 
     /**
@@ -465,6 +464,6 @@ abstract contract VaultFactoryConfiguration is
             revert InvalidZeroAddress();
         }
         $.vaultDeployer = newVaultDeployer;
-        emit VaultDeployerChanged(oldVaultDeployer, newVaultDeployer);
+        emit VaultDeployerUpdated(oldVaultDeployer, newVaultDeployer);
     }
 }

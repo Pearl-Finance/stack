@@ -76,7 +76,6 @@ contract StackVault is
         uint256 penaltyFee,
         uint256 borrowAmountReducedBy
     );
-    event BorrowInterestRateUpdated(uint256 oldRate, uint256 newRate);
     event BorrowLimitUpdated(uint256 oldBorrowLimit, uint256 newBorrowLimit);
     event InterestAccrued(uint256 amount);
     event Swap(address indexed initiator, address indexed swapTarget, bytes swapData, bytes swapResult);
