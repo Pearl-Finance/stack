@@ -829,8 +829,12 @@ contract StackVault is
 
         if (totalCollateralRemoved > collateralAmount) {
             totalCollateralRemoved = collateralAmount;
-            unchecked {
-                penaltyFeeAmount = totalCollateralRemoved - repaidCollateralAmount;
+            if (totalCollateralRemoved > repaidCollateralAmount) {
+                unchecked {
+                    penaltyFeeAmount = totalCollateralRemoved - repaidCollateralAmount;
+                }
+            } else {
+                penaltyFeeAmount = 0;
             }
         }
 
