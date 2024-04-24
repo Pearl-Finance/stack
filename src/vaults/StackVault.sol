@@ -933,18 +933,14 @@ contract StackVault is
     function closeBadDebtPosition(address account, address to) external nonReentrant {
         accrueInterest();
 
-        StackVaultStorage storage $ = _getStackVaultStorage();
-
-        uint256 collateralAmount;
-        uint256 collateralValue;
-        uint256 borrowAmount;
-        uint256 borrowValue;
-
-        (collateralAmount, collateralValue, borrowAmount, borrowValue) = _userPositionInfo(account);
+        (uint256 collateralAmount, uint256 collateralValue, uint256 borrowAmount, uint256 borrowValue) =
+            _userPositionInfo(account);
 
         if (collateralValue > borrowValue) {
             revert NoBadDebt(account);
         }
+
+        StackVaultStorage storage $ = _getStackVaultStorage();
 
         address _borrowTokenOracle = borrowTokenOracle();
         address _collateralTokenOracle = $.collateralTokenOracle;
