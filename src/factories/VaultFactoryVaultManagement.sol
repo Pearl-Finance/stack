@@ -194,6 +194,20 @@ abstract contract VaultFactoryVaultManagement is
     }
 
     /**
+     * @notice Sets a new borrow token oracle max price age for a specific vault.
+     * @dev Updates the maximum price age for the borrow token oracle of a given vault by calling the
+     * `setBorrowTokenOracleMaxPriceAge` function on the StackVault contract.
+     * This value determines the maximum acceptable age for the price data from the oracle.
+     * This action can only be performed by the contract owner.
+     * Reverts if the new max price age is the same as the current one to prevent unnecessary transactions.
+     * @param vault The address of the vault for which to set the new borrow token oracle max price age.
+     * @param maxPriceAge The new maximum price age to be set.
+     */
+    function setBorrowTokenOracleMaxPriceAge(address payable vault, uint256 maxPriceAge) public onlyOwner {
+        _requireVault(vault).setBorrowTokenOracleMaxPriceAge(maxPriceAge);
+    }
+
+    /**
      * @notice Updates the oracle address used for collateral token price feeds for a specific vault.
      * @dev Sets a new oracle for obtaining collateral token price feeds, replacing the existing oracle address for the
      * specified vault. This function can only be called by the contract owner. It ensures that the new oracle address
@@ -204,6 +218,20 @@ abstract contract VaultFactoryVaultManagement is
      */
     function setCollateralTokenOracle(address payable vault, address newOracle) public onlyOwner {
         _requireVault(vault).setCollateralTokenOracle(newOracle);
+    }
+
+    /**
+     * @notice Sets a new collateral token oracle max price age for a specific vault.
+     * @dev Updates the maximum price age for the collateral token oracle of a given vault by calling the
+     * `setCollateralTokenOracleMaxPriceAge` function on the StackVault contract.
+     * This value determines the maximum acceptable age for the price data from the oracle.
+     * This action can only be performed by the contract owner.
+     * Reverts if the new max price age is the same as the current one to prevent unnecessary transactions.
+     * @param vault The address of the vault for which to set the new collateral token oracle max price age.
+     * @param maxPriceAge The new maximum price age to be set.
+     */
+    function setCollateralTokenOracleMaxPriceAge(address payable vault, uint256 maxPriceAge) public onlyOwner {
+        _requireVault(vault).setCollateralTokenOracleMaxPriceAge(maxPriceAge);
     }
 
     /**

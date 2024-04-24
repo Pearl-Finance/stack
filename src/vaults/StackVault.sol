@@ -52,6 +52,8 @@ contract StackVault is
     using SafeERC20 for IERC20;
     using SafeERC20 for BorrowToken;
 
+    uint256 private constant _DEFAULT_ORACLE_PRICE_MAX_AGE = 1 hours;
+
     uint256 public constant DEFAULT_BORROW_OPENING_FEE = 0.005e18;
     uint256 public constant DEFAULT_FLASHLOAN_FEE = 0.005e18;
 
@@ -101,6 +103,8 @@ contract StackVault is
         bool isRetired;
         address borrowTokenOracle;
         address collateralTokenOracle;
+        uint256 borrowTokenOracleMaxAge;
+        uint256 collateralTokenOracleMaxAge;
         uint256 borrowLimit;
         uint256 liquidationThreshold;
         uint256 liquidationPenaltyFee;
@@ -222,6 +226,8 @@ contract StackVault is
             0,
             (Constants.LTV_PRECISION - _liquidationThreshold) * Constants.FEE_PRECISION / (2 * Constants.LTV_PRECISION)
         );
+        $.borrowTokenOracleMaxAge = _DEFAULT_ORACLE_PRICE_MAX_AGE;
+        $.collateralTokenOracleMaxAge = _DEFAULT_ORACLE_PRICE_MAX_AGE;
     }
 
     /**
@@ -291,6 +297,20 @@ contract StackVault is
     }
 
     /**
+     * @notice Sets the maximum age for the borrow token oracle.
+     * @dev Updates the maximum age for the borrow token oracle. Only callable by the factory.
+     * @param maxAge The new maximum age for the borrow token oracle.
+     */
+    function setBorrowTokenOracleMaxPriceAge(uint256 maxAge) public onlyFactory {
+        StackVaultStorage storage $ = _getStackVaultStorage();
+        uint256 oldMaxAge = $.borrowTokenOracleMaxAge;
+        if (oldMaxAge == maxAge) {
+            revert ValueUnchanged();
+        }
+        $.borrowTokenOracleMaxAge = maxAge;
+    }
+
+    /**
      * @notice Sets the oracle address for the collateral token.
      * @dev Updates the oracle used for pricing the collateral token. Only callable by the factory.
      * @param newOracle The new oracle address for the collateral token.
@@ -302,6 +322,20 @@ contract StackVault is
             revert ValueUnchanged();
         }
         _updateCollateralTokenOracle($, oldOracle, newOracle);
+    }
+
+    /**
+     * @notice Sets the maximum age for the collateral token oracle.
+     * @dev Updates the maximum age for the collateral token oracle. Only callable by the factory.
+     * @param maxAge The new maximum age for the collateral token oracle.
+     */
+    function setCollateralTokenOracleMaxPriceAge(uint256 maxAge) public onlyFactory {
+        StackVaultStorage storage $ = _getStackVaultStorage();
+        uint256 oldMaxAge = $.collateralTokenOracleMaxAge;
+        if (oldMaxAge == maxAge) {
+            revert ValueUnchanged();
+        }
+        $.collateralTokenOracleMaxAge = maxAge;
     }
 
     /**
@@ -1008,13 +1042,15 @@ contract StackVault is
 
         if (collateralShare != 0) {
             collateralAmount = $.totalCollateralAmount.toTotalAmount(collateralShare, Math.Rounding.Floor);
-            collateralValue = IOracle($.collateralTokenOracle).valueOf(collateralAmount, Math.Rounding.Floor);
+            collateralValue = IOracle($.collateralTokenOracle).valueOf(
+                collateralAmount, $.collateralTokenOracleMaxAge, Math.Rounding.Floor
+            );
         }
 
         if (borrowShare != 0) {
             address oracle = borrowTokenOracle();
             borrowAmount = $.totalBorrowAmount.toTotalAmount(borrowShare, Math.Rounding.Ceil);
-            borrowValue = IOracle(oracle).valueOf(borrowAmount, Math.Rounding.Floor);
+            borrowValue = IOracle(oracle).valueOf(borrowAmount, $.borrowTokenOracleMaxAge, Math.Rounding.Floor);
         }
     }
 

@@ -62,6 +62,24 @@ contract AggregatorV3Wrapper is IOracle {
     }
 
     /**
+     * @notice Calculates the amount of tokens equivalent to a given value in the oracle's pricing currency, ensuring
+     * the price data is not older than maxAge.
+     * @param value The value in the oracle's pricing currency to convert to tokens.
+     * @param maxAge The maximum age (in seconds) for valid price data.
+     * @param rounding The rounding direction to use in the calculation.
+     * @return amount The equivalent amount of tokens based on the current price, if it's not stale.
+     */
+    function amountOf(uint256 value, uint256 maxAge, Math.Rounding rounding) external view returns (uint256 amount) {
+        uint256 price;
+        uint256 age;
+        (price, age) = _priceInfo();
+        if (age > maxAge) {
+            revert StalePrice(price, maxAge, age);
+        }
+        amount = value.mulDiv(_tokenPrecision, price, rounding);
+    }
+
+    /**
      * @notice Calculates the amount of tokens equivalent to a given value in the oracle's pricing currency at a
      * specific price.
      * @dev Converts a value in the pricing currency to an equivalent amount of tokens using the provided price, scaling
@@ -115,6 +133,25 @@ contract AggregatorV3Wrapper is IOracle {
      */
     function valueOf(uint256 amount, Math.Rounding rounding) external view returns (uint256 value) {
         value = _valueOf(amount, _latestPrice(), rounding);
+    }
+
+    /**
+     * @notice Calculates the value in the oracle's pricing currency of a given amount of tokens, ensuring the price
+     * data is not older than maxAge.
+     * @param amount The amount of tokens to convert to the oracle's pricing currency.
+     * @param maxAge The maximum age (in seconds) for valid price data.
+     * @param rounding The rounding direction to use in the calculation.
+     * @return value The equivalent value in the oracle's pricing currency based on the current price, if it's not
+     * stale.
+     */
+    function valueOf(uint256 amount, uint256 maxAge, Math.Rounding rounding) external view returns (uint256 value) {
+        uint256 price;
+        uint256 age;
+        (price, age) = _priceInfo();
+        if (age > maxAge) {
+            revert StalePrice(price, maxAge, age);
+        }
+        value = _valueOf(amount, price, rounding);
     }
 
     /**

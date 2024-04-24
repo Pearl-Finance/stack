@@ -53,6 +53,21 @@ contract CappedPriceOracle is IOracle, CommonErrors {
     }
 
     /**
+     * @notice Converts a value in the oracle's quote currency to an amount in the oracle's asset, ensuring the price is
+     * not older than the specified maximum age.
+     * @dev Uses the underlying oracle to fetch the latest price and apply the capped value, then converts the given
+     * value to the equivalent amount in the oracle's asset.
+     * @param value The value to convert.
+     * @param maxAge The maximum acceptable age for the price data.
+     * @param rounding The rounding method (up, down, or closest).
+     * @return amount The calculated amount in the oracle's asset.
+     */
+    function amountOf(uint256 value, uint256 maxAge, Math.Rounding rounding) external view returns (uint256 amount) {
+        uint256 price = _capPrice(IOracle(underlyingOracle).latestPrice(maxAge));
+        amount = IOracle(underlyingOracle).amountOfAtPrice(value, price, rounding);
+    }
+
+    /**
      * @notice Converts a value in the oracle's quote currency to an amount of the token at a specific (capped) price,
      *         applying a specified rounding method.
      * @dev Calculates the equivalent amount of the oracle's asset for a given value using the specified (and capped)
@@ -101,6 +116,21 @@ contract CappedPriceOracle is IOracle, CommonErrors {
      */
     function valueOf(uint256 amount, Math.Rounding rounding) external view returns (uint256 value) {
         uint256 price = _capPrice(IOracle(underlyingOracle).latestPrice());
+        value = IOracle(underlyingOracle).valueOfAtPrice(amount, price, rounding);
+    }
+
+    /**
+     * @notice Converts an amount in the oracle's asset to a value in the base currency, ensuring the price data is not
+     * older than a specified maximum age.
+     * @dev Uses the capped price and ensures that the underlying oracle's latest price is not stale beyond the
+     * specified maxAge.
+     * @param amount The amount to convert.
+     * @param maxAge The maximum age in seconds for the price data to be considered valid.
+     * @param rounding The rounding method (up, down, or closest).
+     * @return value The calculated value in the base currency.
+     */
+    function valueOf(uint256 amount, uint256 maxAge, Math.Rounding rounding) external view returns (uint256 value) {
+        uint256 price = _capPrice(IOracle(underlyingOracle).latestPrice(maxAge));
         value = IOracle(underlyingOracle).valueOfAtPrice(amount, price, rounding);
     }
 

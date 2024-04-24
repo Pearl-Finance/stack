@@ -31,6 +31,18 @@ interface IOracle {
     function amountOf(uint256 value, Math.Rounding rounding) external view returns (uint256 amount);
 
     /**
+     * @notice Converts a value in the base currency to an amount in the oracle's asset, ensuring that the price data is
+     * not older than maxAge.
+     * @dev Function to calculate the amount of asset corresponding to a given value, with rounding, while ensuring the
+     * latest price is fresh.
+     * @param value The value to convert.
+     * @param maxAge The maximum acceptable age for the price data (in seconds).
+     * @param rounding The rounding method to be used (up, down, or closest).
+     * @return amount The calculated amount in the oracle's asset.
+     */
+    function amountOf(uint256 value, uint256 maxAge, Math.Rounding rounding) external view returns (uint256 amount);
+
+    /**
      * @notice Converts a value in the base currency to an amount in the oracle's asset at a specific price, applying a
      *         specified rounding method.
      * @dev Calculates the equivalent amount of the oracle's asset for a given value using a specified price.
@@ -70,6 +82,17 @@ interface IOracle {
      * @return value The calculated value in the base currency.
      */
     function valueOf(uint256 amount, Math.Rounding rounding) external view returns (uint256 value);
+
+    /**
+     * @notice Converts an amount in the oracle's asset to a value in the base currency, ensuring that the price data is
+     * not older than maxAge.
+     * @dev Function to calculate the value of a given amount, while ensuring the latest price is not stale.
+     * @param amount The amount to convert.
+     * @param maxAge The maximum acceptable age for the price data (in seconds).
+     * @param rounding The rounding method to be used.
+     * @return value The calculated value in the base currency.
+     */
+    function valueOf(uint256 amount, uint256 maxAge, Math.Rounding rounding) external view returns (uint256 value);
 
     /**
      * @notice Converts an amount in the oracle's asset to a value in the base currency at a specific price, applying a
