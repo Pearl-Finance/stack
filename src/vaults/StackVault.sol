@@ -1300,7 +1300,7 @@ contract StackVault is
         swapAmountIn = fromTokenBalanceBefore - fromTokenBalanceAfter;
         swapAmountOut = toTokenBalanceAfter - toTokenBalanceBefore;
 
-        if (swapAmountOut < amount) {
+        if (swapAmountIn < amount) {
             fromToken.forceApprove(swapTarget, 0);
         }
     }
