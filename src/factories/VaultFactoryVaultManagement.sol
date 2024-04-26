@@ -249,6 +249,20 @@ abstract contract VaultFactoryVaultManagement is
     }
 
     /**
+     * @notice Sets a new minimum borrow amount for a specific vault.
+     * @dev Updates the minimum borrow amount for a given vault by invoking the `setMinimumBorrowAmount` method on the
+     *      StackVault contract.
+     *      The minimum borrow amount is the smallest amount that can be borrowed from the vault.
+     *      Access to this function is restricted to the contract owner.
+     *      Reverts if the new amount is identical to the current amount to avoid unnecessary transactions.
+     * @param vault The address of the vault for which to set the new minimum borrow amount.
+     * @param newMinimumBorrowAmount The new minimum borrow amount to be set.
+     */
+    function setMinimumBorrowAmount(address payable vault, uint256 newMinimumBorrowAmount) public onlyOwner {
+        _requireVault(vault).setMinimumBorrowAmount(newMinimumBorrowAmount);
+    }
+
+    /**
      * @notice Validates the existence of a vault and returns its StackVault instance.
      * @dev Checks if the given address corresponds to a valid vault by comparing it with the stored vaults in
      *      `VaultFactoryStorage`.

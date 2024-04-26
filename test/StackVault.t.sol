@@ -82,6 +82,9 @@ contract StackVaultTest is Test {
         vault = StackVault(factory.createVault(address(collateralToken), address(collateralTokenOracle), 90, 1e1));
         ethVault = StackVault(factory.createVault(Constants.ETH_ADDRESS, address(collateralTokenOracle), 80, 1e1));
 
+        factory.setMinimumBorrowAmount(payable(address(vault)), 1e18);
+        factory.setMinimumBorrowAmount(payable(address(ethVault)), 1e18);
+
         factory.overrideBorrowInterestRate(0.02e18);
 
         borrowToken.approve(address(factory), 1_000e18);

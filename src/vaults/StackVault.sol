@@ -56,6 +56,7 @@ contract StackVault is
 
     uint256 public constant DEFAULT_BORROW_OPENING_FEE = 0.005e18;
     uint256 public constant DEFAULT_FLASHLOAN_FEE = 0.005e18;
+    uint256 public constant DEFAULT_MINIMUM_BORROW_AMOUNT = 100e18;
 
     struct AccrualInfo {
         uint128 lastAccrualBlock;
@@ -96,6 +97,7 @@ contract StackVault is
     event LiquidationThresholdUpdated(uint8 oldThreshold, uint8 newThreshold);
     event InterestRateMultiplierUpdated(uint256 oldMultiplier, uint256 newMultiplier);
 
+    error BorrowAmountTooLow();
     error BorrowLimitExceeded(uint256 totalAmountBorrowed, uint256 borrowLimit);
     error InvalidLiquidationThreshold(uint8 min, uint8 max, uint8 actual);
     error LeverageFlashloanFailed();
@@ -111,18 +113,19 @@ contract StackVault is
         address borrowTokenOracle;
         address collateralTokenOracle;
         uint256 borrowTokenOracleMaxAge;
-        uint256 collateralTokenOracleMaxAge;
         uint256 borrowLimit;
-        uint256 liquidationThreshold;
-        uint256 liquidationPenaltyFee;
         uint256 borrowOpeningFee;
+        uint256 collateralTokenOracleMaxAge;
         uint256 interestRateMultiplier;
+        uint256 liquidationPenaltyFee;
+        uint256 liquidationThreshold;
+        uint256 minimumBorrowAmount;
         InterestAccruingAmount totalBorrowAmount;
         InterestAccruingAmount totalCollateralAmount;
         AccrualInfo accrualInfo;
-        mapping(address => uint256) userCollateralShare;
-        mapping(address => uint256) userBorrowShare;
         mapping(address => uint256) userBorrowAmount;
+        mapping(address => uint256) userBorrowShare;
+        mapping(address => uint256) userCollateralShare;
     }
 
     // keccak256(abi.encode(uint256(keccak256("pearl.storage.StackVault")) - 1)) & ~bytes32(uint256(0xff))
@@ -224,17 +227,18 @@ contract StackVault is
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
         StackVaultStorage storage $ = _getStackVaultStorage();
-        _updateLiquidationThreshold($, 0, _liquidationThreshold);
-        _updateCollateralTokenOracle($, address(0), _collateralTokenOracle);
         _updateBorrowOpeningFee($, 0, DEFAULT_BORROW_OPENING_FEE);
+        _updateCollateralTokenOracle($, address(0), _collateralTokenOracle);
         _updateInterestRateMultiplier($, 0, _interestRateMultiplier);
         _updateLiquidationPenaltyFee(
             $,
             0,
             (Constants.LTV_PRECISION - _liquidationThreshold) * Constants.FEE_PRECISION / (2 * Constants.LTV_PRECISION)
         );
+        _updateLiquidationThreshold($, 0, _liquidationThreshold);
         $.borrowTokenOracleMaxAge = _DEFAULT_ORACLE_PRICE_MAX_AGE;
         $.collateralTokenOracleMaxAge = _DEFAULT_ORACLE_PRICE_MAX_AGE;
+        $.minimumBorrowAmount = DEFAULT_MINIMUM_BORROW_AMOUNT;
     }
 
     /**
@@ -422,6 +426,29 @@ contract StackVault is
         }
         $.liquidationPenaltyFee = newFee;
         emit LiquidationPenaltyFeeUpdated(oldFee, newFee);
+    }
+
+    /**
+     * @notice Sets the minimum amount that can be borrowed.
+     * @dev Updates the minimum borrow amount. Only callable by the factory.
+     * @param _minimumBorrowAmount The new minimum borrow amount.
+     */
+    function setMinimumBorrowAmount(uint256 _minimumBorrowAmount) external onlyFactory {
+        StackVaultStorage storage $ = _getStackVaultStorage();
+        uint256 oldAmount = $.minimumBorrowAmount;
+        if (oldAmount == _minimumBorrowAmount) {
+            revert ValueUnchanged();
+        }
+        $.minimumBorrowAmount = _minimumBorrowAmount;
+    }
+
+    /**
+     * @notice Retrieves the minimum amount that can be borrowed.
+     * @dev Returns the minimum amount that can be borrowed from the vault.
+     * @return The minimum borrow amount.
+     */
+    function mimimumBorrowAmount() external view returns (uint256) {
+        return _getStackVaultStorage().minimumBorrowAmount;
     }
 
     /**
@@ -1210,8 +1237,14 @@ contract StackVault is
             revert BorrowLimitExceeded($.totalBorrowAmount.total, _borrowLimit);
         }
 
+        uint256 newBorrowAmount = $.userBorrowAmount[account] + amount;
+        uint256 minimumBorrowAmount = $.minimumBorrowAmount;
+        if (newBorrowAmount < minimumBorrowAmount) {
+            revert BorrowAmountTooLow();
+        }
+
         $.userBorrowShare[account] += share;
-        $.userBorrowAmount[account] += amount;
+        $.userBorrowAmount[account] = newBorrowAmount;
         $.accrualInfo.feesEarned += feeAmount;
 
         _factory.notifyAccruedInterest(feeAmount);
