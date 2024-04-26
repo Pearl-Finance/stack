@@ -781,7 +781,7 @@ contract StackVault is
         emit CollateralWithdrawn(account, address(this), withdrawalAmount, share);
 
         (uint256 swapAmountIn, uint256 swapAmountOut) =
-            _safeSwap(collateralToken, borrowToken, withdrawalAmount, swapTarget, swapData);
+            _safeSwap(msg.sender, collateralToken, borrowToken, withdrawalAmount, swapTarget, swapData);
 
         share = _subtractAmountFromDebt(account, swapAmountOut);
         emit Repaid(account, account, swapAmountOut, share);
@@ -829,7 +829,7 @@ contract StackVault is
             (initiator, depositAmount, swapTarget, swapData) = abi.decode(data, (address, uint256, address, bytes));
 
             (uint256 swapAmountIn, uint256 swapAmountOut) =
-                _safeSwap(borrowToken, collateralToken, amount, swapTarget, swapData);
+                _safeSwap(initiator, borrowToken, collateralToken, amount, swapTarget, swapData);
 
             depositAmount += swapAmountOut;
             uint256 share = _addAmountToCollateral(initiator, depositAmount);
@@ -1420,6 +1420,7 @@ contract StackVault is
      * (`swapAmountOut`). It ensures that the swap target is a trusted contract as defined by the vault factory. The
      * function emits a `Swap` event containing details of the swap operation.
      *
+     * @param initiator The address of the user initiating the swap.
      * @param fromToken The token being swapped from.
      * @param toToken The token being swapped to.
      * @param amount The maximum amount of `fromToken` to be swapped. The actual amount swapped may be less.
@@ -1428,10 +1429,14 @@ contract StackVault is
      * @return swapAmountIn The actual amount of `fromToken` that was swapped.
      * @return swapAmountOut The amount of `toToken` received from the swap.
      */
-    function _safeSwap(IERC20 fromToken, IERC20 toToken, uint256 amount, address swapTarget, bytes memory swapData)
-        private
-        returns (uint256 swapAmountIn, uint256 swapAmountOut)
-    {
+    function _safeSwap(
+        address initiator,
+        IERC20 fromToken,
+        IERC20 toToken,
+        uint256 amount,
+        address swapTarget,
+        bytes memory swapData
+    ) private returns (uint256 swapAmountIn, uint256 swapAmountOut) {
         _checkSwapTarget(swapTarget);
 
         uint256 fromTokenBalanceBefore = fromToken.balanceOf(address(this));
@@ -1440,7 +1445,7 @@ contract StackVault is
         fromToken.forceApprove(swapTarget, amount);
 
         bytes memory swapResult = swapTarget.functionCall(swapData);
-        emit Swap(msg.sender, swapTarget, swapData, swapResult);
+        emit Swap(initiator, swapTarget, swapData, swapResult);
 
         uint256 fromTokenBalanceAfter = fromToken.balanceOf(address(this));
         uint256 toTokenBalanceAfter = toToken.balanceOf(address(this));
