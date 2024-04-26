@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {DeployAllBase} from "./base/DeployAllBase.sol";
 
-// forge script ./script/DeployAllTestnet.s.sol --legacy --broadcast --gas-estimate-multiplier 200
+// forge script ./script/DeployAllTestnet.s.sol --legacy --slow --broadcast --gas-estimate-multiplier 200
 contract DeployAll is DeployAllBase {
     function _getUSTBAddress() internal pure override returns (address) {
         return 0x83feDBc0B85c6e29B589aA6BdefB1Cc581935ECD;
@@ -16,12 +16,12 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: UKRE address not set");
     }
 
-    function _getDJUSDAddress() internal override returns (address) {
-        revert("DeployAll: DJUSD address not set");
+    function _getUSDaAddress() internal pure override returns (address) {
+        return 0x902Fd8A51ED809C505F37405120A1E4c4b2c2F6c;
     }
 
-    function _getDJPTAddress() internal override returns (address) {
-        revert("DeployAll: DJPT address not set");
+    function _getPTaAddress() internal pure override returns (address) {
+        return 0x5Cfe47AB9d98A1a00246B576240866F439c1F956;
     }
 
     function _getSwapRouterAddress() internal pure override returns (address) {

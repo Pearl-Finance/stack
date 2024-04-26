@@ -6,34 +6,34 @@ import {RebaseTokenMath} from "@tangible/contracts/libraries/RebaseTokenMath.sol
 
 import {ITokenConverter} from "../interfaces/ITokenConverter.sol";
 
-interface IDJPT {
+interface IPTa {
     function deposit(uint256 assets, address recipient) external returns (uint256 shares);
     function redeem(uint256 shares, address recipient) external returns (uint256 assets);
 }
 
 /**
- * @title DJUSD Token Converter
- * @dev Provides functionality to convert between djUSD and djPT tokens. This contract handles the approval and
- * calling of the deposit and redeem functions in the DJPointsToken contract.
+ * @title Arcana Token Converter
+ * @dev Provides functionality to convert between USDa and PTa tokens. This contract handles the approval and
+ * calling of the deposit and redeem functions in the PTa contract.
  * @author SeaZarrgh LaBuoy
  */
-contract DJUSDTokenConverter is ITokenConverter {
-    address public immutable DJUSD;
-    address public immutable DJPT;
+contract ArcanaTokenConverter is ITokenConverter {
+    address public immutable USDA;
+    address public immutable PTA;
 
     /**
-     * @dev Initializes the contract with djUSD and djPT token addresses.
-     * @param djusd The address of the djUSD token.
-     * @param djpt The address of the djPT token.
+     * @dev Initializes the contract with USDa and PTa token addresses.
+     * @param usda The address of the USDa token.
+     * @param pta The address of the PTa token.
      */
-    constructor(address djusd, address djpt) {
-        DJUSD = djusd;
-        DJPT = djpt;
+    constructor(address usda, address pta) {
+        USDA = usda;
+        PTA = pta;
     }
 
     /**
-     * @notice Converts an amount of one token (djUSD or djPT) to the other.
-     * @dev Approves the necessary amount of tokens and calls the deposit or redeem function on the DJPointsToken
+     * @notice Converts an amount of one token (USDa or PTa) to the other.
+     * @dev Approves the necessary amount of tokens and calls the deposit or redeem function on the PTa
      * contract, depending on the conversion direction.
      * @param tokenIn The token address to convert from.
      * @param tokenOut The token address to convert to.
@@ -46,11 +46,11 @@ contract DJUSDTokenConverter is ITokenConverter {
         override
         returns (uint256 amountOut)
     {
-        if (tokenIn == DJUSD && tokenOut == DJPT) {
-            IERC20(DJUSD).approve(DJPT, amountIn);
-            amountOut = IDJPT(DJPT).deposit(amountIn, receiver);
-        } else if (tokenIn == DJPT && tokenOut == DJUSD) {
-            amountOut = IDJPT(DJPT).redeem(amountIn, receiver);
+        if (tokenIn == USDA && tokenOut == PTA) {
+            IERC20(USDA).approve(PTA, amountIn);
+            amountOut = IPTa(PTA).deposit(amountIn, receiver);
+        } else if (tokenIn == PTA && tokenOut == USDA) {
+            amountOut = IPTa(PTA).redeem(amountIn, receiver);
         } else {
             revert InvalidConversionRequest();
         }

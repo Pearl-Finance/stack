@@ -24,7 +24,7 @@ import {AggregatorV3Wrapper} from "../../src/oracles/AggregatorV3Wrapper.sol";
 import {PearlRouter} from "../../src/periphery/PearlRouter.sol";
 import {PearlRouteFinder} from "../../src/periphery/PearlRouteFinder.sol";
 import {ERC4626Router} from "../../src/periphery/ERC4626Router.sol";
-import {DJUSDTokenConverter} from "../../src/periphery/converters/DJUSDTokenConverter.sol";
+import {ArcanaTokenConverter} from "../../src/periphery/converters/ArcanaTokenConverter.sol";
 
 abstract contract DeployAllBase is PearlDeploymentScript {
     function run() public {
@@ -110,9 +110,9 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
     function _getUKREAddress() internal virtual returns (address);
 
-    function _getDJUSDAddress() internal virtual returns (address);
+    function _getUSDaAddress() internal virtual returns (address);
 
-    function _getDJPTAddress() internal virtual returns (address);
+    function _getPTaAddress() internal virtual returns (address);
 
     function _getSwapRouterAddress() internal pure virtual returns (address);
 
@@ -550,32 +550,32 @@ abstract contract DeployAllBase is PearlDeploymentScript {
     }
 
     function _deployTokenConverters(PearlRouter router) private {
-        address djusdTokenConverter = _deployDJUSDTokenConverter();
-        address djusd = _getDJUSDAddress();
-        address djpt = _getDJPTAddress();
-        router.setTokenConverter(djusd, djusdTokenConverter);
-        router.setTokenConverter(djpt, djusdTokenConverter);
+        address arcanaTokenConverter = _deployArcanaTokenConverter();
+        address usda = _getUSDaAddress();
+        address pta = _getPTaAddress();
+        router.setTokenConverter(usda, arcanaTokenConverter);
+        router.setTokenConverter(pta, arcanaTokenConverter);
     }
 
-    function _deployDJUSDTokenConverter() private returns (address djusdTokenConverterAddress) {
-        address djusd = _getDJUSDAddress();
-        address djpt = _getDJPTAddress();
-        bytes memory bytecode = abi.encodePacked(type(DJUSDTokenConverter).creationCode, abi.encode(djusd, djpt));
+    function _deployArcanaTokenConverter() private returns (address arcanaTokenConverterAddress) {
+        address usda = _getUSDaAddress();
+        address pta = _getPTaAddress();
+        bytes memory bytecode = abi.encodePacked(type(ArcanaTokenConverter).creationCode, abi.encode(usda, pta));
 
-        djusdTokenConverterAddress = vm.computeCreate2Address(_SALT, keccak256(bytecode));
+        arcanaTokenConverterAddress = vm.computeCreate2Address(_SALT, keccak256(bytecode));
 
-        DJUSDTokenConverter djusdTokenConverter;
+        ArcanaTokenConverter arcanaTokenConverter;
 
-        if (_isDeployed(djusdTokenConverterAddress)) {
-            console.log("DJUSD Token Converter is already deployed to %s", djusdTokenConverterAddress);
-            djusdTokenConverter = DJUSDTokenConverter(djusdTokenConverterAddress);
+        if (_isDeployed(arcanaTokenConverterAddress)) {
+            console.log("Arcana Token Converter is already deployed to %s", arcanaTokenConverterAddress);
+            arcanaTokenConverter = ArcanaTokenConverter(arcanaTokenConverterAddress);
         } else {
-            djusdTokenConverter = new DJUSDTokenConverter{salt: _SALT}(djusd, djpt);
-            assert(djusdTokenConverterAddress == address(djusdTokenConverter));
-            console.log("DJUSD Token Converter deployed to %s", djusdTokenConverterAddress);
+            arcanaTokenConverter = new ArcanaTokenConverter{salt: _SALT}(usda, pta);
+            assert(arcanaTokenConverterAddress == address(arcanaTokenConverter));
+            console.log("Arcana Token Converter deployed to %s", arcanaTokenConverterAddress);
         }
 
-        _saveDeploymentAddress("DJUSDTokenConverter", address(djusdTokenConverter));
+        _saveDeploymentAddress("ArcanaTokenConverter", address(arcanaTokenConverter));
     }
 
     function _deployERC4626Router() private returns (address erc4626RouterAddress) {

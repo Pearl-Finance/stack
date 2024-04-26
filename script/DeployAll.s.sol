@@ -13,12 +13,12 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: UKRE address not set");
     }
 
-    function _getDJUSDAddress() internal override returns (address) {
-        revert("DeployAll: DJUSD address not set");
+    function _getUSDaAddress() internal override returns (address) {
+        revert("DeployAll: USDa address not set");
     }
 
-    function _getDJPTAddress() internal override returns (address) {
-        revert("DeployAll: DJPT address not set");
+    function _getPTaAddress() internal override returns (address) {
+        revert("DeployAll: PTa address not set");
     }
 
     function _getSwapRouterAddress() internal pure override returns (address) {
