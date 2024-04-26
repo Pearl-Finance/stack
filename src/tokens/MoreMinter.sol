@@ -29,7 +29,7 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
 
     // keccak256(abi.encode(uint256(keccak256("pearl.storage.MoreMinter")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant MoreMinterStorageLocation =
-        0x7e73b909798c3c9ebb8a04ddc27e32db02d4c781f37f96b8ff89750e1e716800;
+        0x45d65222210387cb7889272ba5bbc981dc1846db58d6c915bc27e17574273f00;
 
     function _getMoreMinterStorage() internal pure returns (MoreMinterStorage storage $) {
         // slither-disable-next-line assembly
