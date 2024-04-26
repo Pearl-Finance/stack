@@ -792,7 +792,6 @@ contract StackVault is
                 share = _addAmountToCollateral(account, delta);
                 emit CollateralDeposited(address(this), account, delta, share);
             }
-            collateralToken.forceApprove(swapTarget, 0);
         }
 
         emit Deleveraged(account, withdrawalAmount, swapAmountOut);
