@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 
-import "@chainlink/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AggregatorV3Mock is AggregatorV3Interface {
     uint8 public immutable decimals;
