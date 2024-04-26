@@ -52,7 +52,7 @@ contract StackVault is
     using SafeERC20 for IERC20;
     using SafeERC20 for BorrowToken;
 
-    uint256 private constant _DEFAULT_ORACLE_PRICE_MAX_AGE = 1 hours;
+    uint256 private constant _DEFAULT_ORACLE_PRICE_MAX_AGE = 24 hours;
 
     uint256 public constant DEFAULT_BORROW_OPENING_FEE = 0.005e18;
     uint256 public constant DEFAULT_FLASHLOAN_FEE = 0.005e18;
@@ -580,6 +580,8 @@ contract StackVault is
 
         $.totalCollateralAmount.total = collateralToken.balanceOf(address(this));
         $.accrualInfo = accrual;
+
+        _burnExcessBorrowTokens();
     }
 
     /// DEPOSITS
@@ -1187,7 +1189,9 @@ contract StackVault is
 
     /**
      * @notice Adds a specified amount of debt to a user's balance.
-     * @dev Internal function to increase a user's debt share based on the borrowed amount.
+     * @dev Internal function that increases a user's debt share based on the borrowed amount, including any applicable
+     * fees. Additionally, it verifies that the new total debt doesn't exceed the borrow limit.
+     * If the total debt exceeds the borrow limit, the function reverts with `BorrowLimitExceeded`.
      * @param account The user's address.
      * @param amount The amount of debt to add.
      * @return share The amount of share added to the user's debt.
@@ -1199,6 +1203,13 @@ contract StackVault is
         amount += feeAmount;
 
         ($.totalBorrowAmount, share) = $.totalBorrowAmount.add(amount, Math.Rounding.Ceil);
+
+        // verify that the borrow limit is not exceeded
+        uint256 _borrowLimit = $.borrowLimit;
+        if ($.totalBorrowAmount.total > _borrowLimit) {
+            revert BorrowLimitExceeded($.totalBorrowAmount.total, _borrowLimit);
+        }
+
         $.userBorrowShare[account] += share;
         $.userBorrowAmount[account] += amount;
         $.accrualInfo.feesEarned += feeAmount;
@@ -1257,16 +1268,29 @@ contract StackVault is
     }
 
     /**
-     * @notice Burns excess borrow tokens to align with the vault's borrow limit.
-     * @dev Internal function to burn any borrow tokens that exceed the vault's current borrow limit.
+     * @notice Burns excess borrow tokens to align with the vault's current borrow limit.
+     * @dev This internal function ensures the borrow token balance does not exceed the vault's borrow limit after
+     * interest accrual or repayment operations. If the current borrow token balance surpasses the expected limit
+     * (calculated as `borrowLimit - totalBorrowAmount.total`), the excess tokens are burned.
+     * This function is typically called after interest settlement or repayment operations to maintain the  desired
+     * borrow token balance.
      */
     function _burnExcessBorrowTokens() internal {
         StackVaultStorage storage $ = _getStackVaultStorage();
+
         uint256 _borrowLimit = $.borrowLimit;
         uint256 balance = borrowToken.balanceOf(address(this));
-        if (balance > _borrowLimit) {
+        uint256 _totalBorrowAmount = $.totalBorrowAmount.total;
+
+        if (_borrowLimit > _totalBorrowAmount) {
+            uint256 expectedBalance;
             unchecked {
-                borrowToken.burn(balance - _borrowLimit);
+                expectedBalance = _borrowLimit - _totalBorrowAmount;
+            }
+            if (balance > expectedBalance) {
+                unchecked {
+                    borrowToken.burn(balance - expectedBalance);
+                }
             }
         }
     }
