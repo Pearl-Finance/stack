@@ -17,11 +17,11 @@ contract DeployAll is DeployAllBase {
     }
 
     function _getUSDaAddress() internal pure override returns (address) {
-        return 0x902Fd8A51ED809C505F37405120A1E4c4b2c2F6c;
+        return 0xA55b2E5cDa70dF5E6A5A100aF945a4c454F2937C;
     }
 
     function _getPTaAddress() internal pure override returns (address) {
-        return 0x5Cfe47AB9d98A1a00246B576240866F439c1F956;
+        return 0x4bC34F3E03F008154592b7AeF0fBBcb805e74Cf4;
     }
 
     function _getSwapRouterAddress() internal pure override returns (address) {
