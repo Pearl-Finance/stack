@@ -337,6 +337,38 @@ contract PearlRouter is MulticallUpgradeable, OwnableUpgradeable, UUPSUpgradeabl
     }
 
     /**
+     * @notice Calculates the required input token amount for a specific output token amount through a defined swap
+     *         path.
+     * @dev Uses the Uniswap V3 quoter to estimate the amount of `tokenIn` required to receive a specific amount of
+     *      `tokenOut` following the given `path`. Supports custom conversion scenarios where the path may require
+     *      conversions outside of direct Uniswap V3 swaps.
+     * @param tokenIn The address of the input token.
+     * @param tokenOut The address of the output token.
+     * @param path The encoded path of tokens to be followed in the swap.
+     * @param amountOut The desired amount of the output token.
+     * @param sender The address initiating the request, used for permissions or validations.
+     * @return amountIn The estimated amount of input tokens required.
+     */
+    function getAmountIn(address tokenIn, address tokenOut, bytes memory path, uint256 amountOut, address sender)
+        public
+        returns (uint256 amountIn)
+    {
+        PearlRouterStorage storage $ = _getPearlRouterStorage();
+        address pathTokenIn = _firstAddressInPath(path);
+        address pathTokenOut = _lastAddressInPath(path);
+
+        if (tokenOut != pathTokenOut) {
+            amountOut = _convertAmount($, tokenOut, pathTokenOut, amountOut, address(this));
+        }
+
+        (amountIn,,,) = IQuoter($.quoter).quoteExactInput(path, amountOut);
+
+        if (tokenIn != pathTokenIn) {
+            amountIn = _convertAmount($, pathTokenIn, tokenIn, amountIn, sender);
+        }
+    }
+
+    /**
      * @notice Retrieves the output amount for a given input amount in a swap.
      * @dev Uses the Uniswap V3 quoter to estimate the output amount required for a swap.
      *      The operation is executed via the Uniswap V3 quoter using the stored quoter address.
@@ -370,9 +402,40 @@ contract PearlRouter is MulticallUpgradeable, OwnableUpgradeable, UUPSUpgradeabl
      * @param amountIn The amount of the input token.
      * @return amountOut The estimated amount of the output token.
      */
-    function getAmountOut(bytes memory path, uint256 amountIn) external returns (uint256 amountOut) {
+    function getAmountOut(bytes memory path, uint256 amountIn) public returns (uint256 amountOut) {
         PearlRouterStorage storage $ = _getPearlRouterStorage();
         (amountOut,,,) = IQuoter($.quoter).quoteExactInput(path, amountIn);
+    }
+
+    /**
+     * @notice Calculates the output token amount for a given input token amount through a defined swap path.
+     * @dev Uses the Uniswap V3 quoter to estimate the amount of `tokenOut` obtainable for a specific amount of
+     *      `tokenIn` following the given `path`. Supports custom conversion scenarios where the path may require
+     *      conversions outside of direct Uniswap V3 swaps.
+     * @param tokenIn The address of the input token.
+     * @param tokenOut The address of the output token.
+     * @param path The encoded path of tokens to be followed in the swap.
+     * @param amountIn The amount of the input token.
+     * @param recipient The address that will receive the output tokens, used for permissions or validations.
+     * @return amountOut The estimated amount of output tokens obtainable.
+     */
+    function getAmountOut(address tokenIn, address tokenOut, bytes memory path, uint256 amountIn, address recipient)
+        public
+        returns (uint256 amountOut)
+    {
+        PearlRouterStorage storage $ = _getPearlRouterStorage();
+        address pathTokenIn = _firstAddressInPath(path);
+        address pathTokenOut = _lastAddressInPath(path);
+
+        if (tokenIn != pathTokenIn) {
+            amountIn = _convertAmount($, tokenIn, pathTokenIn, amountIn, address(this));
+        }
+
+        (amountOut,,,) = IQuoter($.quoter).quoteExactInput(path, amountIn);
+
+        if (tokenOut != pathTokenOut) {
+            amountOut = _convertAmount($, pathTokenOut, tokenOut, amountOut, recipient);
+        }
     }
 
     /**
@@ -397,6 +460,32 @@ contract PearlRouter is MulticallUpgradeable, OwnableUpgradeable, UUPSUpgradeabl
         assembly {
             lastAddress := shr(96, mload(add(add(path, mload(path)), 12)))
         }
+    }
+
+    /**
+     * @notice Converts a given amount of one token to another using a converter contract.
+     * @dev Converts `amountIn` of `tokenIn` to `tokenOut` by invoking the previewConvert function of the associated
+     *      converter. This function is typically used in the context of preparing for a swap where direct conversion
+     *      paths are not available.
+     * @param $ Reference to storage containing contract-wide settings and state.
+     * @param tokenIn The address of the token to be converted from.
+     * @param tokenOut The address of the token to be converted to.
+     * @param amountIn The amount of `tokenIn` to be converted.
+     * @param recipient The recipient address which will receive `tokenOut`.
+     * @return The amount of `tokenOut` received from the conversion.
+     */
+    function _convertAmount(
+        PearlRouterStorage storage $,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        address recipient
+    ) internal view returns (uint256) {
+        address converter = $.tokenConverter[tokenIn];
+        if (converter == address(0)) {
+            revert InvalidPath();
+        }
+        return ITokenConverter(converter).previewConvert(tokenIn, tokenOut, amountIn, recipient);
     }
 
     /**
