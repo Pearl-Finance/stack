@@ -92,6 +92,13 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: UKRE oracle address not set");
     }
 
+    function _getUSDAOracle() internal override returns (address) {
+        if (getChain("unreal").chainId == block.chainid) {
+            return 0xc2f3422C177DF2d9135706cF396436E2630a0A2b;
+        }
+        revert("DeployAll: UKRE oracle address not set");
+    }
+
     function _getUSTBOracle() internal override returns (address) {
         if (getChain("unreal").chainId == block.chainid) {
             return 0x83a6daA1d07178D26a19Ca0FE28e424A80349Be8;

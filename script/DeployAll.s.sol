@@ -73,6 +73,10 @@ contract DeployAll is DeployAllBase {
         revert("DeployAll: UKRE Oracle address not set");
     }
 
+    function _getUSDAOracle() internal virtual override returns (address) {
+        revert("DeployAll: USDA Oracle address not set");
+    }
+
     function _getUSTBOracle() internal virtual override returns (address) {
         revert("DeployAll: USTB Oracle address not set");
     }

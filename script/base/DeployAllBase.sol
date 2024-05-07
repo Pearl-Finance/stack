@@ -70,6 +70,7 @@ abstract contract DeployAllBase is PearlDeploymentScript {
                 _deployStaticOracle("StaticUSTBOracle", _getUSTBAddress(), 1e18);
                 _deployOracleWrapper("DAIOracleWrapper", _getDAI(), _getDAIOracle());
                 _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), _getETHOracle());
+                _deployOracleWrapper("USDAOracleWrapper", _getUSDaAddress(), _getUSDAOracle());
                 _deployOracleWrapper("USTBOracleWrapper", _getUSTBAddress(), _getUSTBOracle());
                 _deployOracleWrapper("UKREOracleWrapper", _getUKREAddress(), _getUKREOracle());
 
@@ -139,6 +140,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
     function _getMOREOracle() internal virtual returns (address);
 
     function _getUKREOracle() internal virtual returns (address);
+
+    function _getUSDAOracle() internal virtual returns (address);
 
     function _getUSTBOracle() internal virtual returns (address);
 
