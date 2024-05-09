@@ -21,7 +21,7 @@ contract DeployAll is DeployAllBase {
     }
 
     function _getPTaAddress() internal pure override returns (address) {
-        return 0x4bC34F3E03F008154592b7AeF0fBBcb805e74Cf4;
+        return 0xf16C2cd0ab0194FC011fcb7fD50Fe5C6F4D0a121;
     }
 
     function _getSwapRouterAddress() internal pure override returns (address) {
