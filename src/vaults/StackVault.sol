@@ -429,8 +429,9 @@ contract StackVault is
     }
 
     /**
-     * @notice Sets the minimum amount that can be borrowed.
-     * @dev Updates the minimum borrow amount. Only callable by the factory.
+     * @notice Sets the minimum amount that can be borrowed from the vault.
+     * @dev Only callable by the factory to update the minimum borrow amount threshold. This helps in preventing
+     * economically inefficient small borrows.
      * @param _minimumBorrowAmount The new minimum borrow amount.
      */
     function setMinimumBorrowAmount(uint256 _minimumBorrowAmount) external onlyFactory {
@@ -443,9 +444,8 @@ contract StackVault is
     }
 
     /**
-     * @notice Retrieves the minimum amount that can be borrowed.
-     * @dev Returns the minimum amount that can be borrowed from the vault.
-     * @return The minimum borrow amount.
+     * @notice Retrieves the current minimum borrow amount.
+     * @return The minimum amount that can be borrowed, used to ensure economically viable borrow sizes.
      */
     function mimimumBorrowAmount() external view returns (uint256) {
         return _getStackVaultStorage().minimumBorrowAmount;
@@ -1214,10 +1214,9 @@ contract StackVault is
     }
 
     /**
-     * @notice Adds a specified amount of debt to a user's balance.
-     * @dev Internal function that increases a user's debt share based on the borrowed amount, including any applicable
-     * fees. Additionally, it verifies that the new total debt doesn't exceed the borrow limit.
-     * If the total debt exceeds the borrow limit, the function reverts with `BorrowLimitExceeded`.
+     * @dev Increases a user's debt share based on the borrowed amount, including any applicable fees. It also enforces
+     * the minimum borrow amount to ensure that small debts that could be economically unviable are prevented.
+     * Emits a `BorrowAmountTooLow` error if the total debt after adding is below the minimum threshold.
      * @param account The user's address.
      * @param amount The amount of debt to add.
      * @return share The amount of share added to the user's debt.
@@ -1250,8 +1249,9 @@ contract StackVault is
     }
 
     /**
-     * @notice Subtracts a specified amount of debt from a user's balance.
-     * @dev Internal function to decrease a user's debt share based on the repaid amount.
+     * @dev Decreases a user's debt share based on the repaid amount. It also ensures that after repayment, the
+     * remaining debt doesn't fall below the minimum borrow amount, unless it reaches zero.
+     * Emits a `BorrowAmountTooLow` error if the debt falls below the minimum required after repayment.
      * @param account The user's address.
      * @param amount The amount of debt to subtract.
      * @return share The amount of share subtracted from the user's debt.
@@ -1260,12 +1260,13 @@ contract StackVault is
         StackVaultStorage storage $ = _getStackVaultStorage();
         ($.totalBorrowAmount, share) = $.totalBorrowAmount.sub(amount, Math.Rounding.Floor);
         $.userBorrowShare[account] -= share;
-        _decreaseUserBorrowAmount($.userBorrowAmount, account, amount);
+        _decreaseUserBorrowAmount($.userBorrowAmount, account, amount, $.minimumBorrowAmount);
     }
 
     /**
-     * @notice Subtracts a specified share of debt from a user's balance.
-     * @dev Internal function to decrease a user's debt by a specific share.
+     * @dev Decreases a user's debt by a specific share and ensures that the remaining debt after removal of the share
+     * does not fall below the minimum required unless it is zero.
+     * Emits `BorrowAmountTooLow` error if the resulting debt is below the minimum threshold.
      * @param account The user's address.
      * @param share The share of debt to subtract.
      * @return amount The equivalent amount of debt subtracted.
@@ -1274,27 +1275,34 @@ contract StackVault is
         StackVaultStorage storage $ = _getStackVaultStorage();
         ($.totalBorrowAmount, amount) = $.totalBorrowAmount.subBase(share, Math.Rounding.Floor);
         $.userBorrowShare[account] -= share;
-        _decreaseUserBorrowAmount($.userBorrowAmount, account, amount);
+        _decreaseUserBorrowAmount($.userBorrowAmount, account, amount, $.minimumBorrowAmount);
     }
 
     /**
-     * @notice Decreases the borrow amount of a user.
-     * @dev Internal function to reduce the total borrow amount recorded for a user.
-     * @param userBorrowAmount The mapping of user addresses to their borrow amounts.
+     * @dev Decreases the borrow amount of a user and ensures the remaining amount does not fall below the minimum
+     * required unless it is zero. This function is called during debt subtraction operations.
+     * Emits `BorrowAmountTooLow` if the resulting debt is below the minimum threshold.
+     * @param userBorrowAmount Mapping of user addresses to their borrow amounts.
      * @param account The user's address.
      * @param amount The amount to decrease the user's borrow amount by.
+     * @param minimumBorrowAmount The minimum borrow amount enforced by this vault.
      */
     function _decreaseUserBorrowAmount(
         mapping(address => uint256) storage userBorrowAmount,
         address account,
-        uint256 amount
+        uint256 amount,
+        uint256 minimumBorrowAmount
     ) internal {
         uint256 borrowAmount = userBorrowAmount[account];
         if (borrowAmount <= amount) {
             userBorrowAmount[account] = 0;
         } else {
             unchecked {
-                userBorrowAmount[account] = borrowAmount - amount;
+                uint256 newBorrowAmount = borrowAmount - amount;
+                if (newBorrowAmount < minimumBorrowAmount) {
+                    revert BorrowAmountTooLow();
+                }
+                userBorrowAmount[account] = newBorrowAmount;
             }
         }
     }
