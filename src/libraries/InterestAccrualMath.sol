@@ -35,8 +35,8 @@ library InterestAccrualMath {
         pure
         returns (uint256 baseAmount)
     {
-        if (amount.total == 0) {
-            baseAmount = totalAmount;
+        if (amount.base == 0) {
+            baseAmount = totalAmount + amount.total;
         } else {
             baseAmount = totalAmount.mulDiv(amount.base, amount.total, rounding);
         }

@@ -965,7 +965,7 @@ contract StackVault is
         (uint256 collateralAmount, uint256 collateralValue, uint256 borrowAmount, uint256 borrowValue) =
             _userPositionInfo(account);
 
-        if (collateralValue > borrowValue) {
+        if (collateralValue >= borrowValue) {
             revert NoBadDebt(account);
         }
 
