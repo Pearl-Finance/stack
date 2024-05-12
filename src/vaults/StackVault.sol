@@ -876,7 +876,8 @@ contract StackVault is
                 repayAmount = borrowAmount;
             }
 
-            if (_isHealthy(collateralValue, borrowValue)) {
+            // prevent liquidation of healthy or bad debt positions
+            if (_isHealthy(collateralValue, borrowValue) || collateralValue < borrowValue) {
                 revert LiquidationFailed(msg.sender, account);
             }
         }
