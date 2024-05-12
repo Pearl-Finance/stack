@@ -794,7 +794,7 @@ contract StackVault is
             }
         }
 
-        emit Deleveraged(account, withdrawalAmount, swapAmountOut);
+        emit Deleveraged(account, swapAmountIn, swapAmountOut);
     }
 
     /**
