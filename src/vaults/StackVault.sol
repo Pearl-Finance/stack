@@ -97,7 +97,7 @@ contract StackVault is
     event LiquidationThresholdUpdated(uint8 oldThreshold, uint8 newThreshold);
     event InterestRateMultiplierUpdated(uint256 oldMultiplier, uint256 newMultiplier);
 
-    error BorrowAmountTooLow();
+    error BorrowAmountTooLow(uint256 amount, uint256 minimum);
     error BorrowLimitExceeded(uint256 totalAmountBorrowed, uint256 borrowLimit);
     error InvalidLiquidationThreshold(uint8 min, uint8 max, uint8 actual);
     error LeverageFlashloanFailed();
@@ -123,7 +123,7 @@ contract StackVault is
         InterestAccruingAmount totalBorrowAmount;
         InterestAccruingAmount totalCollateralAmount;
         AccrualInfo accrualInfo;
-        mapping(address => uint256) userBorrowAmount;
+        mapping(address => uint256) _unused;
         mapping(address => uint256) userBorrowShare;
         mapping(address => uint256) userCollateralShare;
     }
@@ -1227,22 +1227,27 @@ contract StackVault is
 
         amount += feeAmount;
 
-        ($.totalBorrowAmount, share) = $.totalBorrowAmount.add(amount, Math.Rounding.Ceil);
+        InterestAccruingAmount memory totalBorrow = $.totalBorrowAmount;
+        (totalBorrow, share) = totalBorrow.add(amount, Math.Rounding.Ceil);
 
         // verify that the borrow limit is not exceeded
         uint256 _borrowLimit = $.borrowLimit;
-        if ($.totalBorrowAmount.total > _borrowLimit) {
-            revert BorrowLimitExceeded($.totalBorrowAmount.total, _borrowLimit);
+        if (totalBorrow.total > _borrowLimit) {
+            revert BorrowLimitExceeded(totalBorrow.total, _borrowLimit);
         }
 
-        uint256 newBorrowAmount = $.userBorrowAmount[account] + amount;
-        uint256 minimumBorrowAmount = $.minimumBorrowAmount;
-        if (newBorrowAmount < minimumBorrowAmount) {
-            revert BorrowAmountTooLow();
+        uint256 borrowShare = $.userBorrowShare[account];
+        uint256 newBorrowAmount = totalBorrow.toTotalAmount(borrowShare, Math.Rounding.Ceil);
+
+        if (newBorrowAmount != 0) {
+            uint256 minimumBorrowAmount = $.minimumBorrowAmount;
+            if (newBorrowAmount < minimumBorrowAmount) {
+                revert BorrowAmountTooLow(newBorrowAmount, minimumBorrowAmount);
+            }
         }
 
-        $.userBorrowShare[account] += share;
-        $.userBorrowAmount[account] = newBorrowAmount;
+        $.totalBorrowAmount = totalBorrow;
+        $.userBorrowShare[account] = borrowShare + share;
         $.accrualInfo.feesEarned += feeAmount;
 
         _factory.notifyAccruedInterest(feeAmount);
@@ -1258,9 +1263,9 @@ contract StackVault is
      */
     function _subtractAmountFromDebt(address account, uint256 amount) internal returns (uint256 share) {
         StackVaultStorage storage $ = _getStackVaultStorage();
-        ($.totalBorrowAmount, share) = $.totalBorrowAmount.sub(amount, Math.Rounding.Floor);
-        $.userBorrowShare[account] -= share;
-        _decreaseUserBorrowAmount($.userBorrowAmount, account, amount, $.minimumBorrowAmount);
+        InterestAccruingAmount memory totalBorrow = $.totalBorrowAmount;
+        (totalBorrow, share) = totalBorrow.sub(amount, Math.Rounding.Floor);
+        _decreaseUserBorrowShare($, totalBorrow, account, share);
     }
 
     /**
@@ -1273,38 +1278,40 @@ contract StackVault is
      */
     function _subtractShareFromDebt(address account, uint256 share) internal returns (uint256 amount) {
         StackVaultStorage storage $ = _getStackVaultStorage();
-        ($.totalBorrowAmount, amount) = $.totalBorrowAmount.subBase(share, Math.Rounding.Floor);
-        $.userBorrowShare[account] -= share;
-        _decreaseUserBorrowAmount($.userBorrowAmount, account, amount, $.minimumBorrowAmount);
+        InterestAccruingAmount memory totalBorrow = $.totalBorrowAmount;
+        (totalBorrow, amount) = totalBorrow.subBase(share, Math.Rounding.Floor);
+        _decreaseUserBorrowShare($, totalBorrow, account, share);
     }
 
     /**
-     * @dev Decreases the borrow amount of a user and ensures the remaining amount does not fall below the minimum
-     * required unless it is zero. This function is called during debt subtraction operations.
-     * Emits `BorrowAmountTooLow` if the resulting debt is below the minimum threshold.
-     * @param userBorrowAmount Mapping of user addresses to their borrow amounts.
-     * @param account The user's address.
-     * @param amount The amount to decrease the user's borrow amount by.
-     * @param minimumBorrowAmount The minimum borrow amount enforced by this vault.
+     * @notice Decreases the borrow share of a specific user, ensuring compliance with the minimum borrow amount.
+     * @dev This internal function decreases a user's borrow share in response to debt repayment. It adjusts the
+     * `userBorrowShare` mapping and the total borrow amount to reflect the reduced debt. This function also checks that
+     * the resulting borrow amount for the user does not fall below the minimum borrow amount allowed by the vault,
+     * unless it reaches zero. This check helps prevent economically insignificant borrows that could complicate the
+     * debt management in the vault. If the resulting borrow amount is below the minimum threshold and not zero, it
+     * reverts with `BorrowAmountTooLow`.
+     * @param $ The reference to the vault's storage, providing access to the vault's state variables.
+     * @param totalBorrow A reference to the structure representing the total borrow amount, updated in this function.
+     * @param account The address of the user whose borrow share is being decreased.
+     * @param share The amount of borrow share to be reduced, which corresponds to the repaid debt.
      */
-    function _decreaseUserBorrowAmount(
-        mapping(address => uint256) storage userBorrowAmount,
+    function _decreaseUserBorrowShare(
+        StackVaultStorage storage $,
+        InterestAccruingAmount memory totalBorrow,
         address account,
-        uint256 amount,
-        uint256 minimumBorrowAmount
-    ) internal {
-        uint256 borrowAmount = userBorrowAmount[account];
-        if (borrowAmount <= amount) {
-            userBorrowAmount[account] = 0;
-        } else {
-            unchecked {
-                uint256 newBorrowAmount = borrowAmount - amount;
-                if (newBorrowAmount < minimumBorrowAmount) {
-                    revert BorrowAmountTooLow();
-                }
-                userBorrowAmount[account] = newBorrowAmount;
+        uint256 share
+    ) private {
+        uint256 newBorrowShare = $.userBorrowShare[account] - share;
+        uint256 newBorrowAmount = totalBorrow.toTotalAmount(newBorrowShare, Math.Rounding.Ceil);
+        if (newBorrowAmount != 0) {
+            uint256 minimumBorrowAmount = $.minimumBorrowAmount;
+            if (newBorrowAmount < minimumBorrowAmount) {
+                revert BorrowAmountTooLow(newBorrowAmount, minimumBorrowAmount);
             }
         }
+        $.totalBorrowAmount = totalBorrow;
+        $.userBorrowShare[account] = newBorrowShare;
     }
 
     /**
