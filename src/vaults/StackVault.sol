@@ -980,6 +980,10 @@ contract StackVault is
             Math.Rounding.Floor
         );
 
+        if (penaltyFeeAmount > collateralAmount) {
+            penaltyFeeAmount = collateralAmount;
+        }
+
         uint256 share = _subtractAmountFromDebt(account, borrowAmount);
         emit Repaid(address(this), account, borrowAmount, share);
 
@@ -1002,9 +1006,7 @@ contract StackVault is
         }
 
         // sozialize the loss
-        InterestAccruingAmount memory totalBorrow = $.totalBorrowAmount;
-        totalBorrow.total += borrowAmount;
-        $.totalBorrowAmount = totalBorrow;
+        $.totalBorrowAmount.total += borrowAmount;
 
         emit BadDebtPositionClosed(msg.sender, account, collateralAmount, penaltyFeeAmount, liquidationBonus);
     }
