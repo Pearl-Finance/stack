@@ -985,10 +985,12 @@ contract StackVault is
             penaltyFeeAmount = collateralAmount;
         }
 
-        uint256 share = _subtractAmountFromDebt(account, borrowAmount);
+        uint256 share = $.userBorrowShare[account];
+        borrowAmount = _subtractShareFromDebt(account, share);
         emit Repaid(address(this), account, borrowAmount, share);
 
-        share = _subtractAmountFromCollateral(account, collateralAmount);
+        share = $.userCollateralShare[account];
+        collateralAmount = _subtractShareFromCollateral(account, share);
         emit CollateralWithdrawn(account, address(this), collateralAmount, share);
 
         uint256 liquidationBonus = penaltyFeeAmount / 2;
