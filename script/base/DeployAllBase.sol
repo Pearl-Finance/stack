@@ -125,8 +125,6 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
     function _getTeamWallet() internal pure virtual returns (address);
 
-    function _getAMO() internal pure virtual returns (address);
-
     function _getDAI() internal virtual returns (address);
 
     function _getWETH9() internal virtual returns (address);
@@ -223,9 +221,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             console.log("MORE Minter deployed to %s", moreMinterAddress);
         }
 
-        address amo = _getAMO();
         address team = _getTeamWallet();
-        bytes memory init = abi.encodeWithSelector(MoreMinter.initialize.selector, team, vaultFactoryAddress, amo);
+        bytes memory init = abi.encodeWithSelector(MoreMinter.initialize.selector, team, vaultFactoryAddress);
 
         moreMinterProxy = _deployProxy("MoreMinter", address(minter), init);
 

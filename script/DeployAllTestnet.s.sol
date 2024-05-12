@@ -44,10 +44,6 @@ contract DeployAll is DeployAllBase {
         return 0x839AEeA3537989ce05EA1b218aB0F25E54cC3B3f;
     }
 
-    function _getAMO() internal pure override returns (address) {
-        return 0x839AEeA3537989ce05EA1b218aB0F25E54cC3B3f;
-    }
-
     function _getDAI() internal override returns (address) {
         if (getChain("unreal").chainId == block.chainid) {
             return 0x3F93beBAd7BA4d7A5129eA8159A5829Eacb06497;

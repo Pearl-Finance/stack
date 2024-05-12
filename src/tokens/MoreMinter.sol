@@ -3,6 +3,7 @@ pragma solidity =0.8.20;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {IERC20Mintable} from "../interfaces/IERC20Mintable.sol";
 import {IMinter} from "../interfaces/IMinter.sol";
@@ -18,13 +19,16 @@ import {CommonErrors} from "../interfaces/CommonErrors.sol";
  * @author SeaZarrgh LaBuoy
  */
 contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinter {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     address public immutable MORE;
 
     /// @custom:storage-location erc7201:pearl.storage.MoreMinter
     struct MoreMinterStorage {
         address team;
         address vaultFactory;
-        address amo;
+        address amo; // deprecated
+        EnumerableSet.AddressSet amos;
     }
 
     // keccak256(abi.encode(uint256(keccak256("pearl.storage.MoreMinter")) - 1)) & ~bytes32(uint256(0xff))
@@ -67,16 +71,14 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
      *      Can only be called once due to the `initializer` modifier.
      * @param _team The address of the team responsible for minting.
      * @param _vaultFactory The address of the vault factory.
-     * @param _amo The address of the Algorithmic Market Operations Controller (AMO).
      */
-    function initialize(address _team, address _vaultFactory, address _amo) external initializer {
+    function initialize(address _team, address _vaultFactory) external initializer {
         __Ownable_init(_team);
         __UUPSUpgradeable_init();
 
         MoreMinterStorage storage $ = _getMoreMinterStorage();
         _setTeam($, _team);
         _setVaultFactory($, _vaultFactory);
-        _setAMO($, _amo);
     }
 
     /**
@@ -138,34 +140,69 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
     }
 
     /**
-     * @notice Sets a new address for the AMO.
-     * @dev Updates the AMO address in the MoreMinterStorage.
-     *      Restricted to the contract owner.
-     * @param _amo The new address for the AMO.
+     * @notice Returns all AMO addresses.
+     * @dev Returns all addresses in the EnumerableSet of AMOs.
+     * @return An array of AMO addresses.
      */
-    function setAMO(address _amo) external {
+    function amos() external view returns (address[] memory) {
+        return _getMoreMinterStorage().amos.values();
+    }
+
+    /**
+     * @notice Adds a new AMO address to the set of approved AMOs.
+     * @dev Adds a new address to the EnumerableSet of AMOs, checking for zero address and duplicates.
+     * @param _amo The address to be added.
+     */
+    function addAMO(address _amo) external {
         MoreMinterStorage storage $ = _getMoreMinterStorage();
         if (msg.sender != owner() && msg.sender != $.team) {
             revert OwnableUnauthorizedAccount(msg.sender);
         }
-        if (_amo == $.amo) {
+        if ($.amos.contains(_amo)) {
             revert ValueUnchanged();
         }
-        _setAMO($, _amo);
+        _addAMO($, _amo);
     }
 
     /**
-     * @dev Internally sets a new address for the AMO (Algorithmic Market Operations Controller). Updates the AMO
-     * address stored in the MoreMinterStorage.
-     * Ensures the new AMO address is not the zero address, upholding the validity of the AMO's address.
-     * @param $ The MoreMinterStorage instance to update.
-     * @param _amo The new address to be set for the AMO. Must be a non-zero, valid address.
+     * @notice Removes an AMO address from the set of approved AMOs.
+     * @dev Removes an address from the EnumerableSet of AMOs.
+     * @param _amo The address to be removed.
      */
-    function _setAMO(MoreMinterStorage storage $, address _amo) internal {
+    function removeAMO(address _amo) external onlyOwner {
+        MoreMinterStorage storage $ = _getMoreMinterStorage();
+        if (msg.sender != owner() && msg.sender != $.team) {
+            revert OwnableUnauthorizedAccount(msg.sender);
+        }
+        if (!$.amos.contains(_amo)) {
+            revert ValueUnchanged();
+        }
+        _removeAMO($, _amo);
+    }
+
+    /**
+     * @dev Internally adds a new AMO address to the set of approved AMOs.
+     * This internal function encapsulates the logic for adding a new AMO address to the EnumerableSet,
+     * ensuring that it is not a zero address and does not already exist in the set.
+     * @param $ The MoreMinterStorage instance containing the EnumerableSet of AMOs.
+     * @param _amo The AMO address to add. Must be non-zero and not already in the set.
+     */
+    function _addAMO(MoreMinterStorage storage $, address _amo) internal {
         if (_amo == address(0)) {
             revert InvalidZeroAddress();
         }
-        $.amo = _amo;
+        $.amos.add(_amo);
+    }
+
+    /**
+     * @dev Internally removes an AMO address from the set of approved AMOs.
+     * This internal function handles the logic for removing an AMO address from the EnumerableSet.
+     * It checks that the address is currently part of the set before removal.
+     * @param $ The MoreMinterStorage instance containing the EnumerableSet of AMOs.
+     * @param _amo The AMO address to remove. Must be present in the set.
+     */
+    function _removeAMO(MoreMinterStorage storage $, address _amo) internal {
+        $.amos.remove(_amo);
     }
 
     /**
@@ -176,7 +213,7 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
      */
     function mint(address to, uint256 amount) external {
         MoreMinterStorage storage $ = _getMoreMinterStorage();
-        if (msg.sender != $.team && msg.sender != $.vaultFactory && msg.sender != $.amo) {
+        if (msg.sender != $.team && msg.sender != $.vaultFactory && !$.amos.contains(msg.sender)) {
             revert UnauthorizedCaller();
         }
         IERC20Mintable(MORE).mint(to, amount);
@@ -207,14 +244,5 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
      */
     function vaultFactory() external view returns (address) {
         return _getMoreMinterStorage().vaultFactory;
-    }
-
-    /**
-     * @notice Gets the address of the AMO.
-     * @dev Returns the address of the AMO from the MoreMinterStorage.
-     * @return The address of the AMO.
-     */
-    function amo() external view returns (address) {
-        return _getMoreMinterStorage().amo;
     }
 }

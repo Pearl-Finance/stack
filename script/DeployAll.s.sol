@@ -38,11 +38,7 @@ contract DeployAll is DeployAllBase {
     }
 
     function _getTeamWallet() internal pure override returns (address) {
-        revert("DeployAll: Team wallet address not set");
-    }
-
-    function _getAMO() internal pure override returns (address) {
-        revert("DeployAll: AMO address not set");
+        return 0xAC0926290232D07eD8b083F6BE3Ab040010f757F;
     }
 
     function _getDAI() internal pure override returns (address) {
