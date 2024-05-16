@@ -1241,7 +1241,7 @@ contract StackVault is
             revert BorrowLimitExceeded(totalBorrow.total, _borrowLimit);
         }
 
-        uint256 borrowShare = $.userBorrowShare[account];
+        uint256 borrowShare = $.userBorrowShare[account] + share;
         uint256 newBorrowAmount = totalBorrow.toTotalAmount(borrowShare, Math.Rounding.Ceil);
 
         if (newBorrowAmount != 0) {
@@ -1252,7 +1252,7 @@ contract StackVault is
         }
 
         $.totalBorrowAmount = totalBorrow;
-        $.userBorrowShare[account] = borrowShare + share;
+        $.userBorrowShare[account] = borrowShare;
         $.accrualInfo.feesEarned += feeAmount;
 
         _factory.notifyAccruedInterest(feeAmount);
