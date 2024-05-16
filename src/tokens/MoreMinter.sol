@@ -169,7 +169,7 @@ contract MoreMinter is OwnableUpgradeable, UUPSUpgradeable, CommonErrors, IMinte
      * @dev Removes an address from the EnumerableSet of AMOs.
      * @param _amo The address to be removed.
      */
-    function removeAMO(address _amo) external onlyOwner {
+    function removeAMO(address _amo) external {
         MoreMinterStorage storage $ = _getMoreMinterStorage();
         if (msg.sender != owner() && msg.sender != $.team) {
             revert OwnableUnauthorizedAccount(msg.sender);
