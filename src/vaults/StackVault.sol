@@ -624,6 +624,13 @@ contract StackVault is
      */
     function depositCollateral(address to, uint256 amount) external payable nonReentrant returns (uint256 share) {
         accrueInterest();
+
+        // make the first deposit permissioned to prevent inflation attack
+        StackVaultStorage storage $ = _getStackVaultStorage();
+        if ($.totalCollateralAmount.base == 0) {
+            _checkOwner();
+        }
+
         amount = _transferCollateralIn(msg.sender, amount);
         share = _addAmountToCollateral(to, amount);
         emit CollateralDeposited(msg.sender, to, amount, share);
