@@ -953,8 +953,7 @@ contract StackVault is
      *         transferred to the factory to cover fees, while the liquidation bonus is given to the caller.
      *      7. Transfer the liquidation bonus to the specified address (incentivizing the closure of bad debt
      *         positions).
-     *      8. Update the total collateral amount by adding the collateral amount minus the penalty fee to reflect
-     *         collateral that doesn't leave the vault.
+     *      8. Send the collateral amount minus the penalty fee to the owner as a protocol reserve.
      *      9. Socialize the loss by adding the borrow amount back to the total borrow amount to maintain system
      *         stability.
      *     10. Emit the `BadDebtPositionClosed` event to track the operation and provide detailed information.
@@ -1010,9 +1009,12 @@ contract StackVault is
 
         emit Liquidated(msg.sender, account, collateralAmount, penaltyFeeAmount, borrowAmount);
 
-        // add collateral amount minus the penalty fee back to total as this amount won't leave the vault
+        // send remaining collateral to owner as protocol reserve
         unchecked {
-            $.totalCollateralAmount.total += collateralAmount - penaltyFeeAmount;
+            uint256 remainingCollateral = collateralAmount - penaltyFeeAmount;
+            if (remainingCollateral != 0) {
+                _transferCollateralOut(owner(), remainingCollateral);
+            }
         }
 
         // sozialize the loss
