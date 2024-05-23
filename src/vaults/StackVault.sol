@@ -753,12 +753,6 @@ contract StackVault is
     {
         accrueInterest();
 
-        // make the first deposit permissioned to prevent inflation attack
-        StackVaultStorage storage $ = _getStackVaultStorage();
-        if ($.totalCollateralAmount.base == 0) {
-            _checkOwner();
-        }
-
         // transfer user-provided collateral and deposit total collateral
         depositAmount = _transferCollateralIn(msg.sender, depositAmount);
 
