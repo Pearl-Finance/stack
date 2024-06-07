@@ -361,7 +361,7 @@ contract PearlRouter is MulticallUpgradeable, OwnableUpgradeable, UUPSUpgradeabl
             amountOut = _convertAmount($, tokenOut, pathTokenOut, amountOut, address(this));
         }
 
-        (amountIn,,,) = IQuoter($.quoter).quoteExactInput(path, amountOut);
+        (amountIn,,,) = IQuoter($.quoter).quoteExactOutput(path, amountOut);
 
         if (tokenIn != pathTokenIn) {
             amountIn = _convertAmount($, pathTokenIn, tokenIn, amountIn, sender);
