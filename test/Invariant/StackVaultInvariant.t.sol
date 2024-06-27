@@ -36,15 +36,15 @@ import {
 /**
  * @title Stack Vault Invariant Test Cases
  * @author c-n-o-t-e
- * @dev Contract is used to test out Stack Vault Contract in a stateful way.
+ * @dev Contract is used to test out Stack Vault Contract Invariants in a stateful way.
  *
- * Functionalities Tested:
- *  - Debt Repayment
- *  - Leveraged Operations
- *  - Position Liquidations
- *  - Deleveraged Operations
- *  - Collateral Deposits and Withdrawals.
- *  - Borrowing Against Collateral With Interest Accrual.
+ * Invariants Tested:
+ *  - Total Borrowed Amount Is Correct.
+ *  - Users Borrowed Amounts Are Correct.
+ *  - Total Collateral Amount Is Correct.
+ *  - Total Interest Accurred Is Correct.
+ *  - Users Collateral Amounts Are Correct.
+ *  - Total Penalty Fee Amount Collected Is Correct..
  */
 contract StackVaultInvariantTest is Test {
     WETH9 weth;
@@ -146,7 +146,7 @@ contract StackVaultInvariantTest is Test {
         targetContract(address(handler));
     }
 
-    function invariant_userCollateralAmountIsSame() external {
+    function invariant_usersCollateralAmountIsSame() external {
         (address[] memory actors, address[] memory leverageActors) = handler.actors();
 
         for (uint256 i; i < actors.length; ++i) {
@@ -160,7 +160,7 @@ contract StackVaultInvariantTest is Test {
         }
     }
 
-    function invariant_userBorrowAmountIsSame() external {
+    function invariant_usersBorrowedAmountsIsSame() external {
         (address[] memory actors, address[] memory leverageActors) = handler.actors();
 
         for (uint256 i; i < actors.length; ++i) {

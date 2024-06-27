@@ -13,7 +13,7 @@ import "../StackVault.t.sol";
  * @author c-n-o-t-e
  * @dev Contract is used to expose Stack Vault functions for testing in a stateful way.
  *
- * Functionalities Exposed:
+ * Functions Exposed:
  *  - Repay()
  *  - Borrow()
  *  - Leveraged()
