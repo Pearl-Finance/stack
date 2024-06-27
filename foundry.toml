@@ -37,4 +37,8 @@ mumbai = { key = "${ETHERSCAN_POLYGON_KEY}" }
 [fmt]
 wrap_comments = true
 
+[invariant]
+runs = 256  
+depth = 20
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
