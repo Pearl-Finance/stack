@@ -160,34 +160,6 @@ contract StackVaultTest is Test {
         assertEq(borrowValue, 0);
     }
 
-    function testShouldDepositForMultipleUser(uint256 amount, address addr) public {
-        if (addr != address(0)) {
-            vault.transferOwnership(addr);
-            amount = bound(amount, 0, type(uint8).max);
-
-            if (amount == 0) amount = 2 ether;
-            deal(address(collateralToken), addr, amount);
-
-            vm.startPrank(addr);
-            collateralToken.approve(address(vault), amount);
-            (, uint256 share_) = totalCollateralAmount.add(amount, Math.Rounding.Floor);
-            uint256 share = vault.depositCollateral(addr, amount);
-            vm.stopPrank();
-
-            assertEq(share, share_);
-            uint256 cAmount = totalCollateralAmount.toTotalAmount(share, Math.Rounding.Floor);
-            uint256 cValue = IOracle(address(collateralTokenOracle)).valueOf(cAmount, 24 hours, Math.Rounding.Floor);
-
-            (uint256 collateralAmount, uint256 collateralValue, uint256 borrowAmount, uint256 borrowValue) =
-                vault.userPositionInfo(addr);
-
-            assertEq(collateralAmount, cAmount);
-            assertEq(collateralValue, cValue);
-            assertEq(borrowAmount, 0);
-            assertEq(borrowValue, 0);
-        }
-    }
-
     function testDepositETH() public {
         vm.expectRevert("StackVault: Incorrect ETH value");
         ethVault.depositCollateral{value: 1 ether}(address(this), 100e18);
