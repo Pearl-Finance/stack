@@ -111,10 +111,7 @@ contract StackVaultHandler is CommonBase, StdCheats, StdUtils {
     function depositCollateral(uint256 amount) external createActor countCall("Deposit") {
         if (currentActor != address(0)) {
             if (totalBorrowAmount.base > 0) {
-                uint256 interestPerElapsedTime = vault.interestRatePerSecond() * 10;
-                uint256 accruedAmount = totalBorrowAmount.total.mulDiv(interestPerElapsedTime, 1e18);
-                totalBorrowAmount.total = totalBorrowAmount.total + accruedAmount;
-                totalAccruedAmount = totalAccruedAmount + accruedAmount;
+                accrueInterest();
             }
 
             vm.startPrank(currentActor);
@@ -150,10 +147,7 @@ contract StackVaultHandler is CommonBase, StdCheats, StdUtils {
 
             if (amount != 0) {
                 if (totalBorrowAmount.base > 0) {
-                    uint256 interestPerElapsedTime = vault.interestRatePerSecond() * 10;
-                    uint256 accruedAmount = totalBorrowAmount.total.mulDiv(interestPerElapsedTime, 1e18);
-                    totalBorrowAmount.total = totalBorrowAmount.total + accruedAmount;
-                    totalAccruedAmount = totalAccruedAmount + accruedAmount;
+                    accrueInterest();
                 }
 
                 (InterestAccruingAmount memory totalCollateralAmount_, uint256 share_) =
@@ -189,10 +183,7 @@ contract StackVaultHandler is CommonBase, StdCheats, StdUtils {
 
                     if (totalBorrowAmount.total + amountWithfee < type(uint120).max) {
                         if (totalBorrowAmount.base > 0) {
-                            uint256 interestPerElapsedTime = vault.interestRatePerSecond() * 10;
-                            uint256 accruedAmount = totalBorrowAmount.total.mulDiv(interestPerElapsedTime, 1e18);
-                            totalBorrowAmount.total = totalBorrowAmount.total + accruedAmount;
-                            totalAccruedAmount = totalAccruedAmount + accruedAmount;
+                            accrueInterest();
                         }
 
                         totalAccruedAmount = totalAccruedAmount + fee;
@@ -226,11 +217,7 @@ contract StackVaultHandler is CommonBase, StdCheats, StdUtils {
         if (currentActor != address(0)) {
             if (usersDebtShare[currentActor] > 0) {
                 vm.startPrank(currentActor);
-
-                uint256 interestPerElapsedTime = vault.interestRatePerSecond() * 10;
-                uint256 accruedAmount = totalBorrowAmount.total.mulDiv(interestPerElapsedTime, 1e18);
-                totalBorrowAmount.total = totalBorrowAmount.total + accruedAmount;
-                totalAccruedAmount = totalAccruedAmount + accruedAmount;
+                accrueInterest();
 
                 (InterestAccruingAmount memory totalBorrowAmount_, uint256 borrowAmount) =
                     totalBorrowAmount.subBase(usersDebtShare[currentActor], Math.Rounding.Floor);
@@ -272,10 +259,7 @@ contract StackVaultHandler is CommonBase, StdCheats, StdUtils {
 
             if (totalBorrowAmount.total + amountWithfee < type(uint120).max) {
                 if (totalBorrowAmount.base > 0) {
-                    uint256 interestPerElapsedTime = vault.interestRatePerSecond() * 10;
-                    uint256 accruedAmount = totalBorrowAmount.total.mulDiv(interestPerElapsedTime, 1e18);
-                    totalBorrowAmount.total = totalBorrowAmount.total + accruedAmount;
-                    totalAccruedAmount = totalAccruedAmount + accruedAmount;
+                    accrueInterest();
                 }
 
                 totalAccruedAmount = totalAccruedAmount + fee;
@@ -311,10 +295,7 @@ contract StackVaultHandler is CommonBase, StdCheats, StdUtils {
 
             if (usersDebtShare[currentActor] > 0) {
                 if (totalBorrowAmount.base > 0) {
-                    uint256 interestPerElapsedTime = vault.interestRatePerSecond() * 10;
-                    uint256 accruedAmount = totalBorrowAmount.total.mulDiv(interestPerElapsedTime, 1e18);
-                    totalBorrowAmount.total = totalBorrowAmount.total + accruedAmount;
-                    totalAccruedAmount = totalAccruedAmount + accruedAmount;
+                    accrueInterest();
                 }
 
                 uint256 borrowAmount = getUserBorrowAmount(currentActor);
@@ -355,10 +336,7 @@ contract StackVaultHandler is CommonBase, StdCheats, StdUtils {
     function liquidate(uint256 actorSeed) external useActor(actorSeed) countCall("Liquidate") {
         if (currentActor != address(0) && getUserBorrowAmount(currentActor) > 0) {
             if (totalBorrowAmount.base > 0) {
-                uint256 interestPerElapsedTime = vault.interestRatePerSecond() * 10;
-                uint256 accruedAmount = totalBorrowAmount.total.mulDiv(interestPerElapsedTime, 1e18);
-                totalBorrowAmount.total = totalBorrowAmount.total + accruedAmount;
-                totalAccruedAmount = totalAccruedAmount + accruedAmount;
+                accrueInterest();
             }
 
             uint256 borrowAmount = getUserBorrowAmount(currentActor);
@@ -415,6 +393,13 @@ contract StackVaultHandler is CommonBase, StdCheats, StdUtils {
             vm.roll(block.number + 10);
             vm.warp(block.timestamp + 10);
         }
+    }
+
+    function accrueInterest() internal {
+        uint256 interestPerElapsedTime = vault.interestRatePerSecond() * 10;
+        uint256 accruedAmount = totalBorrowAmount.total.mulDiv(interestPerElapsedTime, 1e18);
+        totalBorrowAmount.total = totalBorrowAmount.total + accruedAmount;
+        totalAccruedAmount = totalAccruedAmount + accruedAmount;
     }
 
     function callSummary() external view {
