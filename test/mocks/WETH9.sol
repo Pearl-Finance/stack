@@ -12,6 +12,7 @@ contract WETH9 {
     event Withdrawal(address indexed src, uint256 wad);
 
     mapping(address => uint256) public balanceOf;
+    mapping(address => bool) public blackListedAddress;
     mapping(address => mapping(address => uint256)) public allowance;
 
     receive() external payable {
@@ -45,6 +46,7 @@ contract WETH9 {
     }
 
     function transferFrom(address src, address dst, uint256 wad) public returns (bool) {
+        if (blackListedAddress[dst]) return false;
         require(balanceOf[src] >= wad, "");
 
         if (src != msg.sender && allowance[src][msg.sender] != type(uint256).max) {
@@ -59,4 +61,10 @@ contract WETH9 {
 
         return true;
     }
+
+    function blackListAddress(address addr) external {
+        blackListedAddress[addr] = true;
+    }
+
+    function testExcludeContractForCoverage() external {}
 }
