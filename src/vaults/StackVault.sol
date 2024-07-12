@@ -77,6 +77,13 @@ contract StackVault is
     event Repaid(address indexed borrower, address indexed to, uint256 amount, uint256 share);
     event Leveraged(address indexed borrower, uint256 depositamount, uint256 borrowAmount);
     event Deleveraged(address indexed borrower, uint256 withdrawalAmount, uint256 repayAmount);
+    event PositionClosed(
+        address indexed account,
+        uint256 collateralAmount,
+        uint256 borrowAmount,
+        uint256 collateralTokenPayout,
+        uint256 borrowTokenPayout
+    );
     event Liquidated(
         address indexed liquidator,
         address indexed borrower,
@@ -100,6 +107,7 @@ contract StackVault is
     error BorrowAmountTooLow(uint256 amount, uint256 minimum);
     error BorrowLimitExceeded(uint256 totalAmountBorrowed, uint256 borrowLimit);
     error InvalidLiquidationThreshold(uint8 min, uint8 max, uint8 actual);
+    error InsufficientSwapOutput(uint256 minExpected, uint256 actual);
     error LeverageFlashloanFailed();
     error LiquidationFailed(address liquidator, address account);
     error NoBadDebt(address account);
@@ -732,6 +740,67 @@ contract StackVault is
         emit Repaid(msg.sender, to, amount, share);
     }
 
+    /**
+     * @notice Closes the user's position by swapping all collateral for the borrow token and handling any remaining
+     * balances.
+     * @dev This function allows users to close their position by performing a token swap and adjusting their balances.
+     * It ensures the operation maintains the user's account health and prevents reentrancy or rebase issues during
+     * execution.
+     * The function withdraws all collateral and debt for the user, performs a swap, and adjusts the user's balances
+     * based on the swap results. If the swap output is insufficient to cover the borrowed amount, the function reverts.
+     * Excess tokens (either collateral or borrow tokens) after covering the positions are returned to the user.
+     * @param swapTarget The address of the contract where the swap will be performed.
+     * @param swapData The calldata to be passed to the swap function.
+     * @return collateralTokenPayout The amount of collateral token returned to the user if the swap input is lower than
+     * the actual swapped amount.
+     * @return borrowTokenPayout The amount of borrow token returned to the user if there is excess after repaying the
+     * debt.
+     */
+    function closePosition(address swapTarget, bytes memory swapData)
+        external
+        healthcheck
+        nonReentrant
+        noRebase
+        returns (uint256 collateralTokenPayout, uint256 borrowTokenPayout)
+    {
+        accrueInterest();
+
+        address account = msg.sender;
+
+        StackVaultStorage storage $ = _getStackVaultStorage();
+
+        uint256 borrowShare = $.userBorrowShare[account];
+        uint256 borrowAmount = _subtractShareFromDebt(account, borrowShare);
+        uint256 collateralShare = $.userCollateralShare[account];
+        uint256 collateralAmount = _subtractShareFromCollateral(account, collateralShare);
+
+        emit CollateralWithdrawn(account, account, collateralAmount, collateralShare);
+        emit Repaid(account, account, borrowAmount, borrowShare);
+
+        (uint256 swapAmountIn, uint256 swapAmountOut) =
+            _safeSwap(account, collateralToken, borrowToken, collateralAmount, swapTarget, swapData);
+
+        if (swapAmountIn < collateralAmount) {
+            unchecked {
+                collateralTokenPayout = collateralAmount - swapAmountIn;
+                collateralToken.safeTransfer(account, collateralTokenPayout);
+            }
+        }
+
+        if (borrowAmount < swapAmountOut) {
+            unchecked {
+                borrowTokenPayout = swapAmountOut - borrowAmount;
+                borrowToken.safeTransfer(account, borrowTokenPayout);
+            }
+        } else if (swapAmountOut < borrowAmount) {
+            revert InsufficientSwapOutput(borrowAmount, swapAmountOut);
+        }
+
+        _burnExcessBorrowTokens();
+
+        emit PositionClosed(account, collateralAmount, borrowAmount, collateralTokenPayout, borrowTokenPayout);
+    }
+
     // LEVERAGE
 
     /**
@@ -788,7 +857,7 @@ contract StackVault is
         emit CollateralWithdrawn(account, address(this), withdrawalAmount, share);
 
         (uint256 swapAmountIn, uint256 swapAmountOut) =
-            _safeSwap(msg.sender, collateralToken, borrowToken, withdrawalAmount, swapTarget, swapData);
+            _safeSwap(account, collateralToken, borrowToken, withdrawalAmount, swapTarget, swapData);
 
         share = _subtractAmountFromDebt(account, swapAmountOut);
         emit Repaid(account, account, swapAmountOut, share);
