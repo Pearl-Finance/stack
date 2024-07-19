@@ -16,7 +16,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  * @title Stack Vault Factory Test Cases
  * @author c-n-o-t-e
  * @dev Contract is used to test out Stack Vault Factory Contract in a stateless way.
- *  
+ *
  * Functionalities Tested:
  * - AddReceivers
  * - SetReceivers
@@ -28,7 +28,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  * - DistributionRateForFeeReceiver
  * - UpdateFeeReceiversWithSetOfReceivers
  */
-
 contract FeeSplitterTest is Test {
     More more;
     MoreMinter moreMinter;

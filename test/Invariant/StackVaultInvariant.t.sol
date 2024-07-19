@@ -27,6 +27,7 @@ import {
     StackVaultHandler,
     CappedPriceOracle,
     InterestAccrualMath,
+    StackVaultTransfers,
     IERC3156FlashBorrower,
     InterestAccruingAmount,
     AggregatorV3WrapperMock,
@@ -87,7 +88,7 @@ contract StackVaultInvariantTest is Test {
         ERC20Mock(address(borrowToken)).mint(address(this), 1_000_000e18);
         weth = new WETH9();
 
-        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 6);
+        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 7);
         MoreMinter moreMinter = new MoreMinter(address(borrowToken));
 
         init = abi.encodeCall(moreMinter.initialize, (address(this), factoryAddress));
@@ -97,7 +98,9 @@ contract StackVaultInvariantTest is Test {
         borrowToken.setMinter(address(moreMinter));
 
         VaultImplementationDeployer implementationDeployer = new VaultImplementationDeployer();
-        VaultDeployer vaultDeployer = new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer));
+        StackVaultTransfers transferHelper = new StackVaultTransfers();
+        VaultDeployer vaultDeployer =
+            new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer), address(transferHelper));
 
         init = abi.encodeCall(vaultDeployer.initialize, ());
         proxy = new ERC1967Proxy(address(vaultDeployer), init);

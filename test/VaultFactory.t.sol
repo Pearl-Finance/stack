@@ -16,7 +16,7 @@ import {MockStackVault} from "./mocks/MockStackVault.sol";
 import {MockVaultDeployer} from "./mocks/MockVaultDeployer.sol";
 import {MockVaultImplementationDeployer} from "./mocks/MockVaultImplementationDeployer.sol";
 
-import {StackVault} from "src/vaults/StackVault.sol";
+import {StackVault, StackVaultTransfers} from "src/vaults/StackVault.sol";
 import {CommonErrors} from "src/interfaces/CommonErrors.sol";
 import {VaultImplementationDeployer} from "src/factories/VaultImplementationDeployer.sol";
 import {VaultFactory, VaultDeployer, VaultFactoryVaultManagement} from "src/factories/VaultFactory.sol";
@@ -63,10 +63,12 @@ contract VaultFactoryTest is Test {
 
         weth = new WETH9();
 
-        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 4);
+        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 5);
 
         VaultImplementationDeployer implementationDeployer = new VaultImplementationDeployer();
-        vaultDeployer = new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer));
+        StackVaultTransfers transferHelper = new StackVaultTransfers();
+        vaultDeployer =
+            new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer), address(transferHelper));
         bytes memory init = abi.encodeCall(vaultDeployer.initialize, ());
         ERC1967Proxy proxy = new ERC1967Proxy(address(vaultDeployer), init);
 
@@ -89,7 +91,9 @@ contract VaultFactoryTest is Test {
     function testShouldFailIfAddressZero() public {
         VaultImplementationDeployer implementationDeployer = new VaultImplementationDeployer();
         address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)));
-        vaultDeployer = new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer));
+        StackVaultTransfers transferHelper = new StackVaultTransfers();
+        vaultDeployer =
+            new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer), address(transferHelper));
 
         bytes memory init = abi.encodeCall(vaultDeployer.initialize, ());
         ERC1967Proxy proxy = new ERC1967Proxy(address(vaultDeployer), init);

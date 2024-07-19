@@ -18,6 +18,9 @@ polygon = "${POLYGON_RPC_URL}"
 arbitrum_one = "${ARBITRUM_RPC_URL}"
 optimism = "${OPTIMISM_RPC_URL}"
 base = "${BASE_RPC_URL}"
+bnb_smart_chain = "${BSC_RPC_URL}"
+scroll = "${SCROLL_RPC_URL}"
+blast = "${BLAST_RPC_URL}"
 
 unreal = "${UNREAL_RPC_URL}"
 polygon_mumbai = "${MUMBAI_RPC_URL}"
@@ -27,9 +30,12 @@ sepolia = "${SEPOLIA_RPC_URL}"
 [etherscan]
 mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
 polygon = { key = "${ETHERSCAN_POLYGON_KEY}" }
-# real = { key = "", url = "https://real.blockscout.com/api" }
+real = { key = "", url = "https://real.blockscout.com/api" }
 optimism = { key = "", url = "https://optimism.blockscout.com/api" }
 base = { key = "", url = "https://base.blockscout.com/api" }
+bnb_smart_chain = { key = "${ETHERSCAN_BSC_KEY}", url = "https://bscscan.com/api" }
+scroll = { key = "${ETHERSCAN_SCROLL_KEY}", url = "https://scrollscan.com/api" }
+blast = { key = "${ETHERSCAN_BLAST_KEY}", url = "https://blastscan.io/api" }
 
 unreal = { key = "", url = "https://unreal.blockscout.com/api" }
 mumbai = { key = "${ETHERSCAN_POLYGON_KEY}" }

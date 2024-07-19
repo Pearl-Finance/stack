@@ -23,6 +23,8 @@ import {Constants} from "../libraries/Constants.sol";
 import {FeeMath} from "../libraries/FeeMath.sol";
 import {InterestAccrualMath, InterestAccruingAmount} from "../libraries/InterestAccrualMath.sol";
 
+import {StackVaultTransfers} from "./StackVaultTransfers.sol";
+
 /**
  * @title Stack Vault Contract
  * @notice A multifunctional vault contract for collateral management, borrowing, and flash loan operations.
@@ -152,6 +154,7 @@ contract StackVault is
     IWETH9 private immutable _WETH;
     BorrowToken public immutable borrowToken;
     IERC20 public immutable collateralToken;
+    address private immutable _transferHelper;
 
     /**
      * @notice Ensures that the operation leaves the user's position in a healthy state.
@@ -203,7 +206,7 @@ contract StackVault is
      * @param _collateralToken The address of the collateral token.
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(address factory, address _borrowToken, address _collateralToken) {
+    constructor(address factory, address _borrowToken, address _collateralToken, address transferHelper) {
         _disableInitializers();
         address weth = IVaultFactory(factory).WETH();
         _isNativeCollateralToken = _collateralToken == Constants.ETH_ADDRESS || _collateralToken == weth;
@@ -211,6 +214,7 @@ contract StackVault is
         _WETH = IWETH9(weth);
         borrowToken = BorrowToken(_borrowToken);
         collateralToken = IERC20(_isNativeCollateralToken ? weth : _collateralToken);
+        _transferHelper = transferHelper;
     }
 
     /**
@@ -774,16 +778,13 @@ contract StackVault is
         uint256 collateralShare = $.userCollateralShare[account];
         uint256 collateralAmount = _subtractShareFromCollateral(account, collateralShare);
 
-        emit CollateralWithdrawn(account, account, collateralAmount, collateralShare);
-        emit Repaid(account, account, borrowAmount, borrowShare);
-
         (uint256 swapAmountIn, uint256 swapAmountOut) =
             _safeSwap(account, collateralToken, borrowToken, collateralAmount, swapTarget, swapData);
 
         if (swapAmountIn < collateralAmount) {
             unchecked {
                 collateralTokenPayout = collateralAmount - swapAmountIn;
-                collateralToken.safeTransfer(account, collateralTokenPayout);
+                collateralTokenPayout = _transferCollateralOut(account, collateralTokenPayout);
             }
         }
 
@@ -795,6 +796,9 @@ contract StackVault is
         } else if (swapAmountOut < borrowAmount) {
             revert InsufficientSwapOutput(borrowAmount, swapAmountOut);
         }
+
+        emit CollateralWithdrawn(account, account, collateralAmount, collateralShare);
+        emit Repaid(account, account, borrowAmount, borrowShare);
 
         _burnExcessBorrowTokens();
 
@@ -1450,15 +1454,16 @@ contract StackVault is
      * @param amount The amount of collateral to transfer.
      */
     function _transferCollateralIn(address from, uint256 amount) internal returns (uint256 received) {
-        if (_isNativeCollateralToken) {
-            received = _transferNativeIn(from, amount);
-        } else {
-            require(msg.value == 0, "StackVault: Unexpected ETH value");
-            address to = address(this);
-            uint256 balanceBefore = collateralToken.balanceOf(to);
-            collateralToken.safeTransferFrom(from, to, amount);
-            received = collateralToken.balanceOf(to) - balanceBefore;
-        }
+        (received) = abi.decode(
+            Address.functionDelegateCall(
+                _transferHelper,
+                abi.encodeCall(
+                    StackVaultTransfers.transferCollateralIn,
+                    (_isNativeCollateralToken, _WETH, collateralToken, from, amount)
+                )
+            ),
+            (uint256)
+        );
     }
 
     /**
@@ -1467,45 +1472,16 @@ contract StackVault is
      * @param amount The amount of collateral to transfer.
      */
     function _transferCollateralOut(address to, uint256 amount) internal returns (uint256 sent) {
-        if (_isNativeCollateralToken) {
-            sent = _transferNativeOut(to, amount);
-        } else {
-            address from = address(this);
-            uint256 balanceBefore = collateralToken.balanceOf(from);
-            collateralToken.safeTransfer(to, amount);
-            sent = balanceBefore - collateralToken.balanceOf(from);
-        }
-    }
-
-    /**
-     * @dev Internal function to transfer ETH (or WETH) into the vault.
-     * @param from The address from which to transfer the ETH.
-     * @param amount The amount of ETH to transfer.
-     */
-    function _transferNativeIn(address from, uint256 amount) internal returns (uint256 received) {
-        if (msg.value == 0) {
-            _WETH.transferFrom(from, address(this), amount);
-        } else {
-            require(msg.value == amount, "StackVault: Incorrect ETH value");
-            _WETH.deposit{value: amount}();
-        }
-        received = amount;
-    }
-
-    /**
-     * @dev Internal function to transfer ETH (or WETH) out of the vault.
-     * @param to The address to which to transfer the ETH.
-     * @param amount The amount of ETH to transfer.
-     */
-    function _transferNativeOut(address to, uint256 amount) internal returns (uint256 sent) {
-        _WETH.withdraw(amount);
-        (bool success,) = to.call{value: amount}("");
-        if (!success) {
-            _WETH.deposit{value: amount}();
-            success = _WETH.transfer(to, amount);
-        }
-        require(success, "StackVault: Failed to send ETH");
-        sent = amount;
+        (sent) = abi.decode(
+            Address.functionDelegateCall(
+                _transferHelper,
+                abi.encodeCall(
+                    StackVaultTransfers.transferCollateralOut,
+                    (_isNativeCollateralToken, _WETH, collateralToken, to, amount)
+                )
+            ),
+            (uint256)
+        );
     }
 
     /**

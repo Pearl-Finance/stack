@@ -53,10 +53,12 @@ contract StackVaultNativeTest is Test {
 
         ERC20Mock(address(borrowToken)).mint(address(this), 5_000e18);
 
-        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 4);
+        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 5);
 
         VaultImplementationDeployer implementationDeployer = new VaultImplementationDeployer();
-        VaultDeployer vaultDeployer = new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer));
+        StackVaultTransfers transferHelper = new StackVaultTransfers();
+        VaultDeployer vaultDeployer =
+            new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer), address(transferHelper));
         bytes memory init = abi.encodeCall(vaultDeployer.initialize, ());
         ERC1967Proxy proxy = new ERC1967Proxy(address(vaultDeployer), init);
 

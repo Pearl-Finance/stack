@@ -24,7 +24,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  *  - Withdraw
  *  - Failed Scenarios
  */
-
 contract MoreStakingVaultTest is Test {
     More more;
     MoreMinter moreMinter;

@@ -13,7 +13,7 @@ contract DeployAll is DeployAllBase {
         if (getChain("unreal").chainId == block.chainid) {
             return 0x8bBE2FE226a5d1432ae242B63EFC79c1787D0cF2;
         }
-        revert("DeployAll: UKRE address not set");
+        revert("DeployAllTestnet: UKRE address not set");
     }
 
     function _getUSDaAddress() internal pure override returns (address) {
@@ -107,8 +107,8 @@ contract DeployAll is DeployAllBase {
     }
 
     function _getDeploymentChainAliases() internal pure override returns (string[] memory aliases) {
-        aliases = new string[](2);
+        aliases = new string[](1);
         aliases[0] = "unreal";
-        aliases[1] = "sepolia";
+        //aliases[1] = "sepolia";
     }
 }

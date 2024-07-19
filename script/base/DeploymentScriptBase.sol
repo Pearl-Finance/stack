@@ -5,6 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ERC1967Utils, ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import {EmptyUUPS} from "../utils/EmptyUUPS.sol";
@@ -47,6 +48,8 @@ abstract contract DeploymentScriptBase is Script {
     /// @dev Address for the initial EmptyUUPS implementation.
     address private _emptyUUPS;
 
+    event ExecuteOnMultisig(string chain, address target, bytes data, string description);
+
     /**
      * @dev Constructor for DeploymentScriptBase. It sets the immutable salt for CREATE2 address generation.
      * The salt is derived from the provided raw salt value, allowing for customizable yet consistent address
@@ -84,6 +87,8 @@ abstract contract DeploymentScriptBase is Script {
         _loadPrivateKey();
         setChain("unreal", ChainData("Unreal Chain", 18233, "https://rpc.unreal-orbit.gelato.digital"));
         setChain("real", ChainData("Real Chain", 111188, "https://real.rpc.org"));
+        setChain("scroll", ChainData("Scroll Chain", 534352, "https://scroll.drpc.org"));
+        setChain("blast", ChainData("Blast Chain", 81457, "https://blast.drpc.org"));
     }
 
     /**
@@ -171,8 +176,17 @@ abstract contract DeploymentScriptBase is Script {
             ERC1967Proxy proxy = ERC1967Proxy(payable(proxyAddress));
             address _implementation = address(uint160(uint256(vm.load(address(proxy), PROXY_IMPLEMENTATION_SLOT))));
             if (_implementation != implementation) {
-                UUPSUpgradeable(address(proxy)).upgradeToAndCall(implementation, "");
-                console.log("%s proxy at %s has been upgraded", forContract, proxyAddress);
+                if (Ownable(address(proxy)).owner() != _deployer) {
+                    emit ExecuteOnMultisig(
+                        getChain(block.chainid).chainAlias,
+                        address(proxy),
+                        abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (implementation, "")),
+                        string.concat("Upgrade ", forContract, " proxy")
+                    );
+                } else {
+                    UUPSUpgradeable(address(proxy)).upgradeToAndCall(implementation, "");
+                    console.log("%s proxy at %s has been upgraded", forContract, proxyAddress);
+                }
             } else {
                 console.log("%s proxy at %s remains unchanged", forContract, proxyAddress);
             }

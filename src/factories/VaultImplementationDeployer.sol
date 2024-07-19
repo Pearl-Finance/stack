@@ -11,10 +11,10 @@ import {StackVault} from "../vaults/StackVault.sol";
  * @author SeaZarrgh LaBuoy
  */
 contract VaultImplementationDeployer {
-    function deploy(address factory, address borrowToken, address collateralToken)
+    function deploy(address factory, address borrowToken, address collateralToken, address transferHelper)
         external
         returns (StackVault vault)
     {
-        vault = new StackVault(factory, borrowToken, collateralToken);
+        vault = new StackVault(factory, borrowToken, collateralToken, transferHelper);
     }
 }

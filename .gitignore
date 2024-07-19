@@ -8,3 +8,6 @@ out/
 *.sh
 
 NOTES
+
+# experimental files
+/src/Investor.sol

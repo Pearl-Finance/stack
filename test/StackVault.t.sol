@@ -21,7 +21,13 @@ import {MoreMinter} from "src/tokens/MoreMinter.sol";
 import {VaultImplementationDeployer} from "src/factories/VaultImplementationDeployer.sol";
 import {CappedPriceOracle, IOracle, CommonErrors} from "src/oracles/CappedPriceOracle.sol";
 import {IERC20, Math, Constants, VaultFactory, VaultDeployer} from "src/factories/VaultFactory.sol";
-import {StackVault, InterestAccrualMath, InterestAccruingAmount, FeeMath} from "src/vaults/StackVault.sol";
+import {
+    StackVault,
+    StackVaultTransfers,
+    InterestAccrualMath,
+    InterestAccruingAmount,
+    FeeMath
+} from "src/vaults/StackVault.sol";
 
 /**
  * @title Stack Vault Test Cases
@@ -86,10 +92,12 @@ contract StackVaultTest is Test {
 
         weth = new WETH9();
 
-        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 4);
+        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 5);
 
         VaultImplementationDeployer implementationDeployer = new VaultImplementationDeployer();
-        VaultDeployer vaultDeployer = new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer));
+        StackVaultTransfers transferHelper = new StackVaultTransfers();
+        VaultDeployer vaultDeployer =
+            new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer), address(transferHelper));
         bytes memory init = abi.encodeCall(vaultDeployer.initialize, ());
         ERC1967Proxy proxy = new ERC1967Proxy(address(vaultDeployer), init);
 
@@ -426,7 +434,7 @@ contract StackVaultTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(bToken), init);
         bToken = MockMore(address(proxy));
 
-        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 6);
+        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 7);
         MoreMinter moreMinter = new MoreMinter(address(bToken));
 
         init = abi.encodeCall(moreMinter.initialize, (address(this), factoryAddress));
@@ -435,7 +443,9 @@ contract StackVaultTest is Test {
         bToken.setMinter(address(moreMinter));
 
         VaultImplementationDeployer implementationDeployer = new VaultImplementationDeployer();
-        VaultDeployer vaultDeployer = new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer));
+        StackVaultTransfers transferHelper = new StackVaultTransfers();
+        VaultDeployer vaultDeployer =
+            new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer), address(transferHelper));
 
         init = abi.encodeCall(vaultDeployer.initialize, ());
         proxy = new ERC1967Proxy(address(vaultDeployer), init);
@@ -463,7 +473,7 @@ contract StackVaultTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(borrowToken0), init);
         borrowToken0 = More(address(proxy));
 
-        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 6);
+        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 7);
         MoreMinter moreMinter = new MoreMinter(address(borrowToken0));
 
         init = abi.encodeCall(moreMinter.initialize, (address(this), factoryAddress));
@@ -473,7 +483,9 @@ contract StackVaultTest is Test {
         borrowToken0.setMinter(address(moreMinter));
 
         VaultImplementationDeployer implementationDeployer = new VaultImplementationDeployer();
-        VaultDeployer vaultDeployer = new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer));
+        StackVaultTransfers transferHelper = new StackVaultTransfers();
+        VaultDeployer vaultDeployer =
+            new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer), address(transferHelper));
 
         init = abi.encodeCall(vaultDeployer.initialize, ());
         proxy = new ERC1967Proxy(address(vaultDeployer), init);
@@ -539,7 +551,7 @@ contract StackVaultTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(borrowToken0), init);
         borrowToken0 = More(address(proxy));
 
-        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 6);
+        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 7);
         MoreMinter moreMinter = new MoreMinter(address(borrowToken0));
 
         init = abi.encodeCall(moreMinter.initialize, (address(this), factoryAddress));
@@ -549,7 +561,9 @@ contract StackVaultTest is Test {
         borrowToken0.setMinter(address(moreMinter));
 
         VaultImplementationDeployer implementationDeployer = new VaultImplementationDeployer();
-        VaultDeployer vaultDeployer = new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer));
+        StackVaultTransfers transferHelper = new StackVaultTransfers();
+        VaultDeployer vaultDeployer =
+            new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer), address(transferHelper));
 
         init = abi.encodeCall(vaultDeployer.initialize, ());
         proxy = new ERC1967Proxy(address(vaultDeployer), init);
@@ -625,7 +639,7 @@ contract StackVaultTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(borrowToken0), init);
         borrowToken0 = More(address(proxy));
 
-        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 6);
+        address factoryAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 7);
         MoreMinter moreMinter = new MoreMinter(address(borrowToken0));
 
         init = abi.encodeCall(moreMinter.initialize, (address(this), factoryAddress));
@@ -635,7 +649,9 @@ contract StackVaultTest is Test {
         borrowToken0.setMinter(address(moreMinter));
 
         VaultImplementationDeployer implementationDeployer = new VaultImplementationDeployer();
-        VaultDeployer vaultDeployer = new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer));
+        StackVaultTransfers transferHelper = new StackVaultTransfers();
+        VaultDeployer vaultDeployer =
+            new VaultDeployer(address(weth), factoryAddress, address(implementationDeployer), address(transferHelper));
 
         init = abi.encodeCall(vaultDeployer.initialize, ());
         proxy = new ERC1967Proxy(address(vaultDeployer), init);

@@ -26,6 +26,7 @@ contract VaultDeployer is CommonErrors, OwnableUpgradeable, UUPSUpgradeable {
     address public immutable WETH;
     address public immutable factory;
     address public immutable implementationDeployer;
+    address public immutable transferHelper;
 
     /**
      * @notice Initializes the VaultDeployer contract.
@@ -35,7 +36,7 @@ contract VaultDeployer is CommonErrors, OwnableUpgradeable, UUPSUpgradeable {
      * @param _implementationDeployer The address of the contract responsible for deploying the vault implementation.
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(address weth, address _factory, address _implementationDeployer) {
+    constructor(address weth, address _factory, address _implementationDeployer, address _transferHelper) {
         _disableInitializers();
         if (weth == address(0) || _factory == address(0) || _implementationDeployer == address(0)) {
             revert InvalidZeroAddress();
@@ -43,6 +44,7 @@ contract VaultDeployer is CommonErrors, OwnableUpgradeable, UUPSUpgradeable {
         WETH = weth;
         factory = _factory;
         implementationDeployer = _implementationDeployer;
+        transferHelper = _transferHelper;
     }
 
     /**
@@ -127,7 +129,7 @@ contract VaultDeployer is CommonErrors, OwnableUpgradeable, UUPSUpgradeable {
 
     function _deployImplementation(address borrowToken, address collateralToken) internal returns (StackVault) {
         bytes memory result = implementationDeployer.functionDelegateCall(
-            abi.encodeCall(VaultImplementationDeployer.deploy, (factory, borrowToken, collateralToken))
+            abi.encodeCall(VaultImplementationDeployer.deploy, (factory, borrowToken, collateralToken, transferHelper))
         );
         address vaultAddress = abi.decode(result, (address));
         return StackVault(payable(vaultAddress));
