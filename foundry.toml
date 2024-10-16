@@ -36,6 +36,7 @@ base = { key = "", url = "https://base.blockscout.com/api" }
 bnb_smart_chain = { key = "${ETHERSCAN_BSC_KEY}", url = "https://bscscan.com/api" }
 scroll = { key = "${ETHERSCAN_SCROLL_KEY}", url = "https://scrollscan.com/api" }
 blast = { key = "${ETHERSCAN_BLAST_KEY}", url = "https://blastscan.io/api" }
+arbitrum_one = { key = "${ETHERSCAN_ARBITRUM_KEY}", url = "https://api.arbiscan.io/api" }
 
 unreal = { key = "", url = "https://unreal.blockscout.com/api" }
 mumbai = { key = "${ETHERSCAN_POLYGON_KEY}" }

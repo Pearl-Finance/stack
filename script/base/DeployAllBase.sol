@@ -9,6 +9,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 
 import {PearlDeploymentScript} from "./PearlDeploymentScript.sol";
 
+import {IPair} from "../../src/interfaces/IPair.sol";
+
 import {More} from "../../src/tokens/More.sol";
 import {MoreMinter} from "../../src/tokens/MoreMinter.sol";
 import {MoreStakingVault} from "../../src/vaults/MoreStakingVault.sol";
@@ -26,7 +28,7 @@ import {PearlRouteFinder} from "../../src/periphery/PearlRouteFinder.sol";
 import {ERC4626Router} from "../../src/periphery/ERC4626Router.sol";
 import {ArcanaTokenConverter} from "../../src/periphery/converters/ArcanaTokenConverter.sol";
 import {StackOracle} from "../../src/oracles/StackOracle.sol";
-import {PoolToken0Oracle} from "../../src/oracles/PoolToken0Oracle.sol";
+import {SpotPriceOracle} from "../../src/oracles/SpotPriceOracle.sol";
 import {StackVaultTransfers} from "../../src/vaults/StackVaultTransfers.sol";
 
 abstract contract DeployAllBase is PearlDeploymentScript {
@@ -49,23 +51,17 @@ abstract contract DeployAllBase is PearlDeploymentScript {
             require(moreAddress < _getUSTBAddress(), "Invalid MORE address (use a different salt)");
             address moreStakingVault = _deployMoreStakingVault(moreAddress, _chain.name, _chain.chainAlias);
             More more = More(moreAddress);
-            (address vaultFactoryAddress,) = _computeProxyAddress("VaultFactory");
-            console.log("Predicted vault factory address: %s", vaultFactoryAddress);
-            address moreMinter = _deployMoreMinter(address(more), vaultFactoryAddress);
-            if (more.minter() != moreMinter) {
-                more.setMinter(moreMinter);
-            }
 
             //address arcUSDOracle = _deployStackOracle("arcUSDOracle", "arcUSD/USD", "arcUSD/USD Oracle");
             //_deployOracleWrapper("arcUSDOracleWrapper", _getUSDaAddress(), arcUSDOracle);
-
+            /*
             if (_chain.chainId == getChain("bnb_smart_chain").chainId) {
                 address usdt = 0x55d398326f99059fF775485246999027B3197955;
                 address usdtOracle = 0xB97Ad0E74fa7d920791E90258A6E2085088b4320;
                 _deployOracleWrapper("USDTOracleWrapper", usdt, usdtOracle);
                 address moreUsdtPool = 0x8540CF27FF440E2f53A13819c4788578658f6F83;
                 address morePoolOracle =
-                    _deployPoolToken0Oracle("MOREOracle", "MORE/USD", "MORE/USD Oracle", moreUsdtPool, usdtOracle);
+            _deployPoolToken0Oracle("MOREOracle", "MORE/USD", "MORE/USD Oracle", moreUsdtPool, usdtOracle);
                 _deployOracleWrapper("MOREOracleWrapper", address(more), morePoolOracle);
             }
 
@@ -73,12 +69,11 @@ abstract contract DeployAllBase is PearlDeploymentScript {
                 address usdc = 0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4;
                 address usdcOracle = 0x43d12Fb3AfCAd5347fA764EeAB105478337b7200;
                 _deployOracleWrapper("USDCOracleWrapper", usdc, usdcOracle);
-                /*
-                address moreUsdcPool = ;
+                address usdcMorePool = 0xb0a7cB220b586d4AE97133Eff3d22e1C8559099C;
                 address morePoolOracle =
-                _deployPoolToken0Oracle("MOREOracle", "MORE/USD", "MORE/USD Oracle", moreUsdcPool, usdcOracle);
-                _deployOracleWrapper("MOREOracleWrapper", address(more), morePoolOracle);
-                */
+            _deployPoolToken1Oracle("MOREOracle", "MORE/USD", "MORE/USD Oracle", usdcMorePool, usdcOracle);
+                address ow = _deployOracleWrapper("MOREOracleWrapper", address(more), morePoolOracle);
+                console.log("Latest MORE price: %d", AggregatorV3Wrapper(ow).latestPrice());
             }
 
             if (_chain.chainId == getChain("blast").chainId) {
@@ -88,14 +83,43 @@ abstract contract DeployAllBase is PearlDeploymentScript {
                 /*
                 address moreUsdbPool = ;
                 address morePoolOracle =
-                _deployPoolToken0Oracle("MOREOracle", "MORE/USD", "MORE/USD Oracle", moreUsdbPool, usdbOracle);
+            _deployPoolToken0Oracle("MOREOracle", "MORE/USD", "MORE/USD Oracle", moreUsdbPool, usdbOracle);
                 _deployOracleWrapper("MOREOracleWrapper", address(more), morePoolOracle);
                 */
+            /*
             }
-
+            */
+            /*
+            if (_chain.chainId == getChain("unreal").chainId || _chain.chainId == getChain("real").chainId) {
+                address ustb = _getUSTBAddress();
+                address pearl;
+                address caviar;
+                if (_chain.chainId == getChain("unreal").chainId) {
+                    pearl = 0xCE1581d7b4bA40176f0e219b2CaC30088Ad50C7A; // TODO
+                    caviar = 0xB08F026f8a096E6d92eb5BcbE102c273A7a2d51C; // TODO
+                } else {
+                    pearl = 0xCE1581d7b4bA40176f0e219b2CaC30088Ad50C7A;
+                    caviar = 0xB08F026f8a096E6d92eb5BcbE102c273A7a2d51C;
+                }
+                address factory = _getPearlFactoryAddress();
+                string memory getPoolSig = "getPool(address,address,uint24)";
+                bytes memory result;
+                    (, result) = factory.staticcall(abi.encodeWithSignature(getPoolSig, pearl, ustb, 1e4));
+                address pearlUstbPair = abi.decode(result, (address));
+            (, result) = factory.staticcall(abi.encodeWithSignature(getPoolSig, caviar, pearl, 0.05e4));
+                address cvrPearlPair = abi.decode(result, (address));
+            address pearlOracle = _deploySpotPriceOracle("pearlSpotPriceOracle", pearlUstbPair, pearl);
+                    address cvrOracle = _deploySpotPriceOracle("cvrSpotPriceOracle", cvrPearlPair, caviar);
+            }
             if (!isTokenOnlyChain(_chain.chainId)) {
+                (address vaultFactoryAddress,) = _computeProxyAddress("VaultFactory");
+                console.log("Predicted vault factory address: %s", vaultFactoryAddress);
+                address moreMinter = _deployMoreMinter(address(more), vaultFactoryAddress);
+                if (more.minter() != moreMinter) {
+                    more.setMinter(moreMinter);
+                }
                 address[] memory feeReceivers;
-                if (_chain.chainId == getChain("unreal").chainId || _chain.chainId == getChain("real").chainId) {
+            if (_chain.chainId == getChain("unreal").chainId || _chain.chainId == getChain("real").chainId) {
                     feeReceivers = new address[](1);
                     feeReceivers[0] = _getTangibleRevenueDistributor();
                 } else {
@@ -103,43 +127,35 @@ abstract contract DeployAllBase is PearlDeploymentScript {
                     feeReceivers[0] = _getGelatoMessageSender();
                 }
                 _deployInterestRateOracle("USTBInterestRateOracle", _getUSTBAddress(), 0.05e18);
-
-                if (_chain.chainId == getChain("unreal").chainId || _chain.chainId == getChain("real").chainId) {
+            if (_chain.chainId == getChain("unreal").chainId || _chain.chainId == getChain("real").chainId) {
                     _deployInterestRateOracle("DAIInterestRateOracle", _getDAI(), 0);
                 }
-                address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault, feeReceivers);
-
+                    address feeSplitter = _deployFeeSplitter(address(more), moreStakingVault, feeReceivers);
                 address moreOracle = _deployStaticOracle("StaticMOREOracle", address(more), 1e18);
                 _deployStaticOracle("StaticUSTBOracle", _getUSTBAddress(), 1e18);
-
                 // TODO: remove condition when oracles have been deployed on all chains
-                if (_chain.chainId == getChain("unreal").chainId || _chain.chainId == getChain("real").chainId) {
+            if (_chain.chainId == getChain("unreal").chainId || _chain.chainId == getChain("real").chainId) {
                     _deployOracleWrapper("DAIOracleWrapper", _getDAI(), _getDAIOracle());
                     _deployOracleWrapper("ETHOracleWrapper", _getWETH9(), _getETHOracle());
                     _deployOracleWrapper("USDAOracleWrapper", _getUSDaAddress(), _getUSDAOracle());
                     _deployOracleWrapper("USTBOracleWrapper", _getUSTBAddress(), _getUSTBOracle());
                     //_deployOracleWrapper("UKREOracleWrapper", _getUKREAddress(), _getUKREOracle());
                 }
-
-                address moreOracleWrapper = _deployOracleWrapper("MOREOracleWrapper", address(more), _getMOREOracle());
+                    address moreOracleWrapper = _deployOracleWrapper("MOREOracleWrapper", address(more),
+                    _getMOREOracle());
                 moreOracle = _deployCappedOracle("CappedMOREOracle", moreOracleWrapper, 1e18);
-
                 address implementationDeployer = _deployVaultImplementationDeployer();
                 address transferHelper = _deployTransferHelper();
                 address vaultDeployer =
                     _deployVaultDeployer(vaultFactoryAddress, implementationDeployer, transferHelper);
-                address vaultFactory = _deployVaultFactory(moreMinter, moreOracle, vaultDeployer, feeSplitter);
+            address vaultFactory = _deployVaultFactory(moreMinter, moreOracle, vaultDeployer, feeSplitter);
                 address pearlRouter = _deployPearlRouter();
-
                 assert(vaultFactoryAddress == vaultFactory);
-
                 if (!VaultFactory(vaultFactory).isTrustedSwapTarget(pearlRouter)) {
                     VaultFactory(vaultFactory).setTrustedSwapTarget(pearlRouter, true);
                 }
-
                 _deployERC4626Router();
-            }
-
+            }*/
             for (uint256 j = 0; j < deploymentChainAliases.length; j++) {
                 if (i != j) {
                     if (
@@ -171,7 +187,8 @@ abstract contract DeployAllBase is PearlDeploymentScript {
 
     function isTokenOnlyChain(uint256 chainId) internal returns (bool) {
         return chainId == getChain("bnb_smart_chain").chainId || chainId == getChain("blast").chainId
-            || chainId == getChain("scroll").chainId;
+            || chainId == getChain("scroll").chainId || chainId == getChain("arbitrum_one").chainId
+            || chainId == getChain("base").chainId;
     }
 
     function _getUSTBAddress() internal pure virtual returns (address);
@@ -735,39 +752,29 @@ abstract contract DeployAllBase is PearlDeploymentScript {
         _saveDeploymentAddress(storageKey, address(oracle));
     }
 
-    function _deployPoolToken0Oracle(
-        string memory storageKey,
-        string memory pairKey,
-        string memory description,
-        address poolAddress,
-        address token1Oracle
-    ) private returns (address oracleAddress) {
-        bytes memory bytecode = abi.encodePacked(
-            type(PoolToken0Oracle).creationCode, abi.encode(_deployer, description, pairKey, poolAddress, token1Oracle)
-        );
+    function _deploySpotPriceOracle(string memory key, address pair, address token) private returns (address) {
+        address token0 = IPair(pair).token0();
+        address token1 = IPair(pair).token1();
+        assert(token0 == token || token1 == token);
 
-        oracleAddress = vm.computeCreate2Address(_SALT, keccak256(bytecode));
+        bool zeroInOne = token0 == token;
 
-        PoolToken0Oracle oracle;
+        bytes32 initCodeHash = hashInitCode(type(SpotPriceOracle).creationCode, abi.encode(pair, zeroInOne, 8));
+        address oracleAddress = vm.computeCreate2Address(_SALT, initCodeHash);
+
+        _saveDeploymentAddress(key, oracleAddress);
 
         if (_isDeployed(oracleAddress)) {
-            console.log("%s is already deployed to %s", description, oracleAddress);
-            oracle = PoolToken0Oracle(oracleAddress);
-        } else {
-            oracle = new PoolToken0Oracle{salt: _SALT}(_deployer, description, pairKey, poolAddress, token1Oracle);
-            assert(oracleAddress == address(oracle));
-            console.log("%s deployed to %s", description, oracleAddress);
+            console.log("%s is already deployed to %s", key, oracleAddress);
+            return oracleAddress;
         }
 
-        if (keccak256(abi.encodePacked(oracle.pairKey())) != keccak256(abi.encodePacked(pairKey))) {
-            oracle.setPairKey(pairKey);
-        }
+        SpotPriceOracle oracle = new SpotPriceOracle{salt: _SALT}(pair, zeroInOne, 8);
+        assert(oracleAddress == address(oracle));
 
-        if (keccak256(abi.encodePacked(oracle.description())) != keccak256(abi.encodePacked(description))) {
-            oracle.setDescription(description);
-        }
+        console.log("%s deployed to %s", key, oracleAddress);
 
-        _saveDeploymentAddress(storageKey, address(oracle));
+        return oracleAddress;
     }
 
     /**
